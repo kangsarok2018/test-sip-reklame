@@ -122,21 +122,30 @@
     <div id="main-app" class="hidden flex-col min-h-screen">
       <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-50 print:hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex justify-between items-center gap-3">
+          
           <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
             <div class="flex items-center gap-2.5">
-              <div class="bg-white p-1 rounded-xl shadow-inner w-10 h-10 flex items-center justify-center overflow-hidden">
+              <div class="bg-white p-1 rounded-xl shadow-inner w-10 h-10 flex items-center justify-center overflow-hidden shrink-0">
                 <img src="https://lh3.googleusercontent.com/d/1_7FZisvkbSmNCadKTjaRVrFQpgPoIgNF" alt="Logo Merangin" class="w-full h-full object-contain" />
               </div>
               <div>
-                <h1 class="font-bold text-lg leading-tight tracking-wide">SIP-REKLAME</h1>
-                <p class="text-[11px] text-indigo-200">Sistem Pendataan & Geotagging Objek Pajak</p>
+                <h1 class="font-bold text-base sm:text-lg leading-tight tracking-wide">SIP-REKLAME</h1>
+                <p class="text-[10px] sm:text-[11px] text-indigo-200">Sistem Pendataan Objek Pajak</p>
               </div>
             </div>
-            <span id="sync-status-mobile" class="sm:hidden px-2 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 rounded-full text-[10px] font-semibold flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online
-            </span>
+            
+            <!-- Tambahan: Area Status Online & Tombol Logout khusus Mobile -->
+            <div class="flex items-center gap-2 sm:hidden shrink-0">
+              <span id="sync-status-mobile" class="px-2 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 rounded-full text-[10px] font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="hidden min-[380px]:inline">Online</span>
+              </span>
+              <button onclick="handleLogout()" class="flex items-center justify-center w-8 h-8 bg-rose-500/20 hover:bg-rose-500/40 text-rose-100 rounded-lg border border-rose-500/30 transition shadow-sm">
+                <i class="fa-solid fa-power-off text-sm"></i>
+              </button>
+            </div>
           </div>
 
+          <!-- Desktop Menu (Sembunyi saat mobile) -->
           <div class="hidden sm:flex items-center gap-4">
             <nav class="flex items-center bg-indigo-950/60 p-1 rounded-xl w-auto text-sm font-medium">
               <button id="tab-btn-dashboard" onclick="switchTab('dashboard')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow"><i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard</button>
@@ -195,7 +204,7 @@
             <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
               <div class="flex justify-between items-center">
                 <div>
-                  <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">WP Terdaftar</p>
+                  <p class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">Terdaftar</p>
                   <h3 id="dash-total-terdaftar" class="text-2xl sm:text-3xl font-black text-blue-600 mt-1">0</h3>
                 </div>
                 <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg sm:text-xl">
