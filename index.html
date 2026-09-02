@@ -116,7 +116,6 @@
     </div>
 
     <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-      <!-- TAB 1: DASHBOARD VIEW -->
       <section id="view-dashboard" class="space-y-6">
         <div class="relative overflow-hidden bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 rounded-2xl shadow-xl text-white p-6 sm:p-8">
           <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -215,7 +214,6 @@
         </div>
       </section>
 
-      <!-- TAB 2: FORM VIEW -->
       <section id="view-form" class="hidden max-w-4xl mx-auto pb-4">
         <div class="bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden">
           <div class="bg-gradient-to-r from-indigo-900 to-indigo-800 text-white p-5 sm:p-7">
@@ -507,7 +505,6 @@
         </div>
       </section>
 
-      <!-- TAB 3: DATA TABLE VIEW -->
       <section id="view-table" class="hidden space-y-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
           <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
@@ -610,17 +607,11 @@
         </div>
       </section>
 
-      <!-- TAB 4: LAPORAN VIEW -->
       <section id="view-laporan" class="hidden max-w-5xl mx-auto space-y-6">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 print:hidden">
-          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
-            <div class="flex flex-wrap gap-2">
-              <button onclick="toggleLaporanType('detail')" id="btn-lap-detail" class="px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg transition">Detail Objek</button>
-              <button onclick="toggleLaporanType('rekap')" id="btn-lap-rekap" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg transition">Rekap Petugas</button>
-            </div>
-            <button onclick="confirmResetDatabase()" class="px-3.5 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
-              <i class="fa-solid fa-triangle-exclamation"></i> Reset / Hapus Semua Data
-            </button>
+          <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
+            <button onclick="toggleLaporanType('detail')" id="btn-lap-detail" class="px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg transition flex-1 sm:flex-none">Detail Objek</button>
+            <button onclick="toggleLaporanType('rekap')" id="btn-lap-rekap" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg transition flex-1 sm:flex-none">Rekap Petugas</button>
           </div>
 
           <div id="ctrl-lap-detail" class="flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -992,7 +983,6 @@
         fetchRecordsFromGoogleSheet(); 
       };
 
-      // --- NAVIGASI TAB (GLOBAL EXPOSED) ---
       window.switchTab = function(tab) {
         ['view-dashboard', 'view-form', 'view-table', 'view-laporan'].forEach(id => {
             const el = document.getElementById(id);
@@ -1148,29 +1138,6 @@
             .catch(err => {
                 showToast("Error koneksi sistem: " + err.message, "error");
             });
-        }
-      }
-
-      function confirmResetDatabase() {
-        const pass = prompt("PERINGATAN: Tindakan ini akan MENGHAPUS SEMUA DATA PENDATAAN di database secara permanen!\n\nKetik 'RESET' untuk mengonfirmasi:");
-        if (pass === "RESET") {
-            showToast("Menghapus seluruh data dari server...", "info");
-            fetch(`${FIREBASE_URL}/reklame.json`, {
-                method: 'DELETE'
-            })
-            .then(response => {
-                if(!response.ok) throw new Error("Gagal mereset database");
-                records = [];
-                updateDashboard();
-                renderTable();
-                resetLaporanSearch();
-                showToast("Database berhasil dikosongkan!", "success");
-            })
-            .catch(err => {
-                showToast("Error reset: " + err.message, "error");
-            });
-        } else if (pass !== null) {
-            showToast("Konfirmasi reset dibatalkan (kata kunci salah).", "error");
         }
       }
 
@@ -1650,18 +1617,18 @@
         document.getElementById('kertasLaporan').classList.add('hidden');
         document.getElementById('kertasLaporanRekap').classList.add('hidden');
 
-        document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg";
-        document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg";
+        document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
+        document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
 
         if (type === 'detail') {
             document.getElementById('ctrl-lap-detail').classList.remove('hidden');
             document.getElementById('ctrl-lap-detail').classList.add('flex');
-            document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg";
+            document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
             resetLaporanSearch();
         } else {
             document.getElementById('ctrl-lap-rekap').classList.remove('hidden');
             document.getElementById('ctrl-lap-rekap').classList.add('flex');
-            document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg";
+            document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
 
             const select = document.getElementById('selectPetugas');
             select.innerHTML = '<option value="">-- Semua Petugas --</option>';
