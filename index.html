@@ -1422,7 +1422,7 @@
         // 1. Chart Kategori Reklame (Papan Nama, Billboard, Spanduk, dll)
         const kategoriCount = {};
         records.forEach(r => {
-            let jenis = r.jenisReklame || "Lainnya";
+            let jenis = String(r.jenisReklame || "Lainnya");
             if (jenis.includes("PAPAN NAMA")) jenis = "Papan Nama";
             else if (jenis.includes("BILLBOARD") || jenis.includes("MINI BILLBOARD")) jenis = "Billboard / Mini";
             else if (jenis.includes("NEON BOX")) jenis = "Neon Box";
@@ -1461,7 +1461,7 @@
         // 2. Chart Sebaran Kelas Jalan / Kawasan
         const kelasCount = {};
         records.forEach(r => {
-            let k = r.kelasJalan || "Lain-lain";
+            let k = String(r.kelasJalan || "Lain-lain");
             if (k.includes("KAWASAN A")) k = "Kawasan A (Negara)";
             else if (k.includes("KAWASAN B")) k = "Kawasan B (Provinsi)";
             else if (k.includes("KAWASAN C")) k = "Kawasan C (Kota)";
