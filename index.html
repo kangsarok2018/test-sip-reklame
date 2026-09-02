@@ -1357,6 +1357,7 @@
               if(inputPetugas) {
                   inputPetugas.removeAttribute('readonly');
                   inputPetugas.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+                  inputPetugas.value = name; // Set ke nama admin yang sedang login
               }
 
               // Tampilkan filter dropdown petugas di tab laporan
@@ -2397,7 +2398,7 @@
 
       document.addEventListener('input', function(e) {
         if (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'search')) {
-            // Abaikan uppercase otomatis pada login section
+            // Abaikan uppercase otomatis pada login section dan form pembuatan username petugas
             if (e.target.id === 'login-username' || e.target.id === 'login-password' || e.target.id === 'userUsername') return;
             
             const start = e.target.selectionStart;
