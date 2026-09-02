@@ -1631,11 +1631,6 @@
       function deleteRecord(id) {
         const target = records.find(r => r.id === id);
         const namaUsahaTarget = target ? target.namaUsaha : "Objek";
-        
-        if (localStorage.getItem('userRole') !== 'admin') {
-            showToast("Anda tidak memiliki akses untuk menghapus data.", "error");
-            return;
-        }
 
         if(confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) {
             showToast("Menghapus data dari server...", "info");
@@ -1646,7 +1641,8 @@
             .then(response => {
                 if(!response.ok) throw new Error("Gagal menghapus data");
                 
-                logAuditTrail("HAPUS", target ? target.namaPetugas : "Admin", namaUsahaTarget, "Menghapus data objek pajak dari database");
+                const currentUser = localStorage.getItem('loggedUser') || "Admin";
+                logAuditTrail("HAPUS", currentUser, namaUsahaTarget, "Menghapus data objek pajak dari database");
 
                 records = records.filter(r => r.id !== id);
                 updateDashboard();
