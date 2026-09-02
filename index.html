@@ -107,6 +107,7 @@
             <button id="tab-btn-dashboard" onclick="switchTab('dashboard')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow"><i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard</button>
             <button id="tab-btn-form" onclick="switchTab('form')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-pen-to-square mr-1.5"></i> Pendataan</button>
             <button id="tab-btn-table" onclick="switchTab('table')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-table-list mr-1.5"></i> Data Objek</button>
+            <button id="tab-btn-audit" onclick="switchTab('audit')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Histori</button>
             <button id="tab-btn-laporan" onclick="switchTab('laporan')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-file-contract mr-1.5"></i> Laporan</button>
           </nav>
         </div>
@@ -639,7 +640,39 @@
         </div>
       </section>
 
-      <!-- TAB 4: LAPORAN VIEW -->
+      <!-- TAB 4: AUDIT TRAIL / HISTORI VIEW -->
+      <section id="view-audit" class="hidden max-w-5xl mx-auto space-y-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Histori & Audit Trail Aktivitas</h2>
+            <p class="text-xs text-slate-500">Mencatat riwayat perubahan data, penambahan objek baru, serta petugas yang melakukan aksi.</p>
+          </div>
+          <button onclick="fetchAuditLogs()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow hover:bg-indigo-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate"></i> Muat Ulang Histori
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs divide-y divide-slate-200">
+              <thead class="bg-slate-50 text-slate-600 uppercase font-bold tracking-wider">
+                <tr>
+                  <th class="px-4 py-3.5">Waktu & Tanggal</th>
+                  <th class="px-4 py-3.5">Petugas</th>
+                  <th class="px-4 py-3.5">Aksi / Tindakan</th>
+                  <th class="px-4 py-3.5">Objek Pajak / Usaha</th>
+                  <th class="px-4 py-3.5">Keterangan Detail</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tr><td colspan="5" class="text-center py-6 text-slate-400">Memuat histori audit...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: LAPORAN VIEW -->
       <section id="view-laporan" class="hidden max-w-5xl mx-auto space-y-6">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 print:hidden">
           <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
@@ -918,19 +951,23 @@
 
     <!-- MOBILE BOTTOM NAVIGATION -->
     <div class="sm:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-50 px-2 py-2 print:hidden flex justify-around">
-      <button onclick="switchTab('dashboard')" id="mob-btn-dashboard" class="flex flex-col items-center justify-center w-1/4 p-1 text-indigo-600 rounded-lg">
+      <button onclick="switchTab('dashboard')" id="mob-btn-dashboard" class="flex flex-col items-center justify-center w-1/5 p-1 text-indigo-600 rounded-lg">
         <i class="fa-solid fa-chart-pie text-lg mb-1"></i>
         <span class="text-[9px] font-bold">Beranda</span>
       </button>
-      <button onclick="switchTab('form')" id="mob-btn-form" class="flex flex-col items-center justify-center w-1/4 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+      <button onclick="switchTab('form')" id="mob-btn-form" class="flex flex-col items-center justify-center w-1/5 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
         <i class="fa-solid fa-pen-to-square text-lg mb-1"></i>
         <span class="text-[9px] font-bold">Data Baru</span>
       </button>
-      <button onclick="switchTab('table')" id="mob-btn-table" class="flex flex-col items-center justify-center w-1/4 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+      <button onclick="switchTab('table')" id="mob-btn-table" class="flex flex-col items-center justify-center w-1/5 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
         <i class="fa-solid fa-table-list text-lg mb-1"></i>
         <span class="text-[9px] font-bold">List Objek</span>
       </button>
-      <button onclick="switchTab('laporan')" id="mob-btn-laporan" class="flex flex-col items-center justify-center w-1/4 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+      <button onclick="switchTab('audit')" id="mob-btn-audit" class="flex flex-col items-center justify-center w-1/5 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+        <i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i>
+        <span class="text-[9px] font-bold">Histori</span>
+      </button>
+      <button onclick="switchTab('laporan')" id="mob-btn-laporan" class="flex flex-col items-center justify-center w-1/5 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
         <i class="fa-solid fa-file-contract text-lg mb-1"></i>
         <span class="text-[9px] font-bold">Laporan</span>
       </button>
@@ -1019,17 +1056,17 @@
       };
 
       window.switchTab = function(tab) {
-        ['view-dashboard', 'view-form', 'view-table', 'view-laporan'].forEach(id => {
+        ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
 
-        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-laporan'].forEach(id => {
+        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white";
         });
 
-        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-laporan'].forEach(id => {
+        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.className = btn.className.replace('text-indigo-600', 'text-slate-400');
         });
@@ -1050,6 +1087,7 @@
             }, 200);
         }
         if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+        if (tab === 'audit') fetchAuditLogs();
         if (tab === 'laporan') resetLaporanSearch();
       };
 
@@ -1091,6 +1129,70 @@
           });
       }
 
+      function logAuditTrail(action, petugas, namaUsaha, detail) {
+        const auditId = "LOG-" + new Date().getTime();
+        const auditData = {
+          id: auditId,
+          timestamp: new Date().toLocaleString('id-ID'),
+          petugas: petugas || "Sistem",
+          action: action, // "TAMBAH", "UPDATE", "HAPUS"
+          namaUsaha: namaUsaha || "-",
+          detail: detail || "-"
+        };
+
+        fetch(`${FIREBASE_URL}/audit_logs/${auditId}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(auditData)
+        }).catch(err => console.error("Audit log error:", err));
+      }
+
+      function fetchAuditLogs() {
+        const tbody = document.getElementById('audit-table-body');
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Memuat histori audit...</td></tr>`;
+
+        fetch(`${FIREBASE_URL}/audit_logs.json`)
+          .then(res => res.json())
+          .then(data => {
+            let logs = [];
+            if (data) {
+              for (let k in data) {
+                logs.push(data[k]);
+              }
+            }
+            logs.sort((a, b) => (b.id < a.id) ? -1 : 1);
+
+            if (logs.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Belum ada histori aktivitas.</td></tr>`;
+              return;
+            }
+
+            let html = '';
+            logs.forEach(l => {
+              let badgeColor = l.action === 'TAMBAH' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : (l.action === 'UPDATE' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 'bg-rose-100 text-rose-800 border-rose-200');
+              let icon = l.action === 'TAMBAH' ? 'fa-plus-circle' : (l.action === 'UPDATE' ? 'fa-pen-to-square' : 'fa-trash');
+
+              html += `
+                <tr class="hover:bg-slate-50 transition">
+                  <td class="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">${l.timestamp}</td>
+                  <td class="px-4 py-3 font-bold text-slate-800">${l.petugas}</td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-0.5 ${badgeColor} border rounded text-[10px] font-extrabold inline-flex items-center gap-1 uppercase">
+                      <i class="fa-solid ${icon}"></i> ${l.action}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 font-bold text-indigo-950">${l.namaUsaha}</td>
+                  <td class="px-4 py-3 text-slate-600 text-xs">${l.detail}</td>
+                </tr>
+              `;
+            });
+            tbody.innerHTML = html;
+          })
+          .catch(err => {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-500">Gagal memuat histori: ${err.message}</td></tr>`;
+          });
+      }
+
       function saveRecord(event) {
         event.preventDefault();
 
@@ -1107,10 +1209,12 @@
 
         const isNew = !document.getElementById('recordId').value;
         const recordId = isNew ? "REC-" + new Date().getTime() : document.getElementById('recordId').value;
+        const namaPetugasVal = document.getElementById('namaPetugas').value;
+        const namaUsahaVal = document.getElementById('namaUsaha').value;
 
         const data = {
             id: recordId,
-            namaPetugas: document.getElementById('namaPetugas').value,
+            namaPetugas: namaPetugasVal,
             statusRegistrasi: document.getElementById('statusRegistrasi').value,
             statusKeaktifan: inputKeaktifan ? inputKeaktifan.value : 'AKTIF',
             keteranganTindakan: isNew ? "DATA BARU" : "UPDATE DATA",
@@ -1119,7 +1223,7 @@
             npwpd: document.getElementById('npwpd').value || "-",
             nik: document.getElementById('nik').value || "-",
             alamatWP: document.getElementById('alamatWP').value || "-",
-            namaUsaha: document.getElementById('namaUsaha').value,
+            namaUsaha: namaUsahaVal,
             judulReklame: document.getElementById('judulReklame').value,
             alamatUsaha: document.getElementById('alamatUsaha').value,
             jenisReklame: document.getElementById('jenisReklame').value,
@@ -1148,6 +1252,15 @@
         .then(() => {
             btn.disabled = false;
             document.getElementById('btnText').innerText = originalText;
+
+            // Catat Audit Trail
+            logAuditTrail(
+              isNew ? "TAMBAH" : "UPDATE",
+              namaPetugasVal,
+              namaUsahaVal,
+              isNew ? `Menambahkan objek reklame baru (${data.jenisReklame})` : `Memperbarui spesifikasi / data reklame`
+            );
+
             showToast("Data berhasil disimpan ke Firebase!", "success");
             resetForm(); 
             fetchRecordsFromGoogleSheet(); 
@@ -1161,7 +1274,10 @@
       }
 
       function deleteRecord(id) {
-        if(confirm("Apakah Anda yakin ingin menghapus data ini SECARA PERMANEN dari Firebase?")) {
+        const target = records.find(r => r.id === id);
+        const namaUsahaTarget = target ? target.namaUsaha : "Objek";
+
+        if(confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) {
             showToast("Menghapus data dari server...", "info");
             
             fetch(`${FIREBASE_URL}/reklame/${id}.json`, {
@@ -1170,6 +1286,8 @@
             .then(response => {
                 if(!response.ok) throw new Error("Gagal menghapus data");
                 
+                logAuditTrail("HAPUS", target ? target.namaPetugas : "Admin", namaUsahaTarget, "Menghapus data objek pajak dari database");
+
                 records = records.filter(r => r.id !== id);
                 updateDashboard();
                 renderTable();
@@ -1419,7 +1537,6 @@
       }
 
       function renderCharts() {
-        // 1. Chart Kategori Reklame (Papan Nama, Billboard, Spanduk, dll)
         const kategoriCount = {};
         records.forEach(r => {
             let jenis = String(r.jenisReklame || "Lainnya");
@@ -1458,7 +1575,6 @@
             }
         });
 
-        // 2. Chart Sebaran Kelas Jalan / Kawasan
         const kelasCount = {};
         records.forEach(r => {
             let k = String(r.kelasJalan || "Lain-lain");
