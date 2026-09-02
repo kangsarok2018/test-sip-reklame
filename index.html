@@ -1274,9 +1274,12 @@
               localStorage.removeItem('userId');
               localStorage.removeItem('userPermissions');
               
-              // Bersihkan form login agar kosong saat kembali ke halaman login
               document.getElementById('login-username').value = "";
               document.getElementById('login-password').value = "";
+
+              // Reset form & paksa tab kembali ke default (dashboard) di belakang layar
+              resetForm();
+              switchTab('dashboard');
 
               showToast("Anda telah keluar dari sesi.", "info");
               checkAuth();
@@ -1409,32 +1412,49 @@
       }
 
       window.switchTab = function(tab) {
+        // 1. Sembunyikan semua konten tab
         ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan', 'view-users'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
 
+        // 2. Reset tampilan tombol navigasi (Desktop)
         ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan', 'tab-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
-            if (btn) btn.className = btn.className.replace("bg-indigo-600 shadow text-white", "text-indigo-200 hover:text-white");
+            if (btn) {
+                btn.classList.remove('text-white', 'bg-indigo-600', 'shadow');
+                btn.classList.add('text-indigo-200', 'hover:text-white');
+            }
         });
 
+        // 3. Reset tampilan tombol navigasi (Mobile)
         ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan', 'mob-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
-            if (btn) btn.className = btn.className.replace('text-indigo-600', 'text-slate-400');
+            if (btn) {
+                btn.classList.remove('text-indigo-600');
+                btn.classList.add('text-slate-400');
+            }
         });
 
+        // 4. Tampilkan view konten target
         const activeView = document.getElementById(`view-${tab}`);
         if (activeView) activeView.classList.remove('hidden');
 
+        // 5. Aktifkan style tombol navigasi (Desktop) target
         const activeTabBtn = document.getElementById(`tab-btn-${tab}`);
         if (activeTabBtn) {
-            activeTabBtn.className = activeTabBtn.className.replace("text-indigo-200 hover:text-white", "text-white bg-indigo-600 shadow");
+            activeTabBtn.classList.remove('text-indigo-200', 'hover:text-white');
+            activeTabBtn.classList.add('text-white', 'bg-indigo-600', 'shadow');
         }
 
+        // 6. Aktifkan style tombol navigasi (Mobile) target
         const mobBtn = document.getElementById(`mob-btn-${tab}`);
-        if (mobBtn) mobBtn.className = mobBtn.className.replace('text-slate-400', 'text-indigo-600');
+        if (mobBtn) {
+            mobBtn.classList.remove('text-slate-400');
+            mobBtn.classList.add('text-indigo-600');
+        }
 
+        // Action spesifik untuk setiap tab
         if (tab === 'dashboard') {
             setTimeout(() => { 
                 if (dashMap) dashMap.invalidateSize(); 
