@@ -613,9 +613,14 @@
       <!-- TAB 4: LAPORAN VIEW -->
       <section id="view-laporan" class="hidden max-w-5xl mx-auto space-y-6">
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 print:hidden">
-          <div class="flex flex-wrap gap-2 border-b border-slate-100 pb-3">
-            <button onclick="toggleLaporanType('detail')" id="btn-lap-detail" class="px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg transition flex-1 sm:flex-none">Detail Objek</button>
-            <button onclick="toggleLaporanType('rekap')" id="btn-lap-rekap" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg transition flex-1 sm:flex-none">Rekap Petugas</button>
+          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
+            <div class="flex flex-wrap gap-2">
+              <button onclick="toggleLaporanType('detail')" id="btn-lap-detail" class="px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg transition">Detail Objek</button>
+              <button onclick="toggleLaporanType('rekap')" id="btn-lap-rekap" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg transition">Rekap Petugas</button>
+            </div>
+            <button onclick="confirmResetDatabase()" class="px-3.5 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation"></i> Reset / Hapus Semua Data
+            </button>
           </div>
 
           <div id="ctrl-lap-detail" class="flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -1146,6 +1151,29 @@
         }
       }
 
+      function confirmResetDatabase() {
+        const pass = prompt("PERINGATAN: Tindakan ini akan MENGHAPUS SEMUA DATA PENDATAAN di database secara permanen!\n\nKetik 'RESET' untuk mengonfirmasi:");
+        if (pass === "RESET") {
+            showToast("Menghapus seluruh data dari server...", "info");
+            fetch(`${FIREBASE_URL}/reklame.json`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if(!response.ok) throw new Error("Gagal mereset database");
+                records = [];
+                updateDashboard();
+                renderTable();
+                resetLaporanSearch();
+                showToast("Database berhasil dikosongkan!", "success");
+            })
+            .catch(err => {
+                showToast("Error reset: " + err.message, "error");
+            });
+        } else if (pass !== null) {
+            showToast("Konfirmasi reset dibatalkan (kata kunci salah).", "error");
+        }
+      }
+
       function changePage(delta) {
         currentPage += delta;
         renderTable();
@@ -1622,18 +1650,18 @@
         document.getElementById('kertasLaporan').classList.add('hidden');
         document.getElementById('kertasLaporanRekap').classList.add('hidden');
 
-        document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
-        document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
+        document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg";
+        document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-slate-100 text-slate-600 text-xs sm:text-sm font-bold rounded-lg";
 
         if (type === 'detail') {
             document.getElementById('ctrl-lap-detail').classList.remove('hidden');
             document.getElementById('ctrl-lap-detail').classList.add('flex');
-            document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
+            document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg";
             resetLaporanSearch();
         } else {
             document.getElementById('ctrl-lap-rekap').classList.remove('hidden');
             document.getElementById('ctrl-lap-rekap').classList.add('flex');
-            document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
+            document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg";
 
             const select = document.getElementById('selectPetugas');
             select.innerHTML = '<option value="">-- Semua Petugas --</option>';
