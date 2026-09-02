@@ -150,6 +150,7 @@
               <button id="tab-btn-table" onclick="switchTab('table')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-table-list mr-1.5"></i> Data Objek</button>
               <button id="tab-btn-audit" onclick="switchTab('audit')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Histori</button>
               <button id="tab-btn-laporan" onclick="switchTab('laporan')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white"><i class="fa-solid fa-file-contract mr-1.5"></i> Laporan</button>
+              <button id="tab-btn-users" onclick="switchTab('users')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white hidden"><i class="fa-solid fa-users-gear mr-1.5"></i> Akun</button>
             </nav>
             
             <!-- User Profile & Logout Box -->
@@ -883,7 +884,97 @@
             </div>
           </div>
         </section>
+
+        <!-- TAB 6: MANAJEMEN AKUN VIEW (ADMIN ONLY) -->
+        <section id="view-users" class="hidden max-w-6xl mx-auto space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-users-gear text-indigo-600"></i> Manajemen Akun Petugas</h2>
+              <p class="text-xs text-slate-500">Kelola akun, akses login, dan hak akses fitur untuk setiap petugas lapangan.</p>
+            </div>
+            <button onclick="openUserModal()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow hover:bg-indigo-700 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-user-plus"></i> Tambah Petugas Baru
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto custom-scrollbar">
+              <table class="w-full text-left text-xs divide-y divide-slate-200">
+                <thead class="bg-slate-50 text-slate-600 uppercase font-bold tracking-wider">
+                  <tr>
+                    <th class="px-4 py-3.5">Nama Petugas</th>
+                    <th class="px-4 py-3.5">Username</th>
+                    <th class="px-4 py-3.5">Role</th>
+                    <th class="px-4 py-3.5">Hak Akses Fitur</th>
+                    <th class="px-4 py-3.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                  <tr><td colspan="5" class="text-center py-6 text-slate-400">Memuat data pengguna...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <!-- MODAL MANAJEMEN AKUN -->
+      <div id="userModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+          <button onclick="closeUserModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+          
+          <h3 id="user-modal-title" class="font-bold text-slate-800 text-lg mb-4 border-b pb-2"><i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i>Tambah Akun Petugas</h3>
+          
+          <form id="userForm" onsubmit="saveUser(event)" class="space-y-4">
+            <input type="hidden" id="userId" value="" />
+            <input type="hidden" id="userRole" value="petugas" />
+            
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-rose-500">*</span></label>
+              <input type="text" id="userName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Cth: Budi Santoso" />
+            </div>
+            
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Username Login <span class="text-rose-500">*</span></label>
+              <input type="text" id="userUsername" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Cth: budi123" />
+            </div>
+            
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Password <span class="text-rose-500">*</span></label>
+              <input type="password" id="userPassword" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Minimal 6 karakter" />
+              <p class="text-[10px] text-slate-500 mt-1">Isi jika membuat baru atau mengubah password.</p>
+            </div>
+
+            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
+              <label class="block text-[11px] font-bold text-indigo-900 mb-2 uppercase tracking-wider">Pengaturan Hak Akses (Petugas)</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                  <input type="checkbox" id="access-form" checked disabled class="w-4 h-4 text-indigo-600 rounded cursor-not-allowed opacity-70" />
+                  Pendataan Objek (Wajib)
+                </label>
+                <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                  <input type="checkbox" id="access-table" class="w-4 h-4 text-indigo-600 rounded" />
+                  Melihat Data Objek
+                </label>
+                <label class="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                  <input type="checkbox" id="access-laporan" class="w-4 h-4 text-indigo-600 rounded" />
+                  Melihat & Cetak Laporan
+                </label>
+              </div>
+              <p class="text-[9px] text-indigo-700 mt-2 italic">*Admin memiliki semua hak akses secara default.</p>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button type="button" onclick="closeUserModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold text-sm transition">Batal</button>
+              <button type="submit" id="btnSaveUser" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md transition flex items-center gap-2">
+                <i class="fa-solid fa-save"></i> Simpan
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
       <!-- MODAL STRUK BUKTI PENDATAAN -->
       <div id="strukModal" class="fixed inset-0 bg-slate-900/85 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
@@ -1019,6 +1110,10 @@
           <i class="fa-solid fa-file-contract text-lg mb-1"></i>
           <span class="text-[9px] font-bold">Laporan</span>
         </button>
+        <button onclick="switchTab('users')" id="mob-btn-users" class="hidden flex-col items-center justify-center w-1/5 p-1 text-slate-400 hover:text-indigo-600 rounded-lg">
+          <i class="fa-solid fa-users-gear text-lg mb-1"></i>
+          <span class="text-[9px] font-bold">Akun</span>
+        </button>
       </div>
     </div> <!-- PENUTUP WADAH UTAMA APLIKASI -->
 
@@ -1030,12 +1125,8 @@
     <script>
       const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
       
-      // Data Pengguna & RBAC
-      const validUsers = {
-          'admin': { pass: 'admin123', role: 'admin', name: 'Administrator' },
-          'petugas1': { pass: 'petugas123', role: 'petugas', name: 'Budi Santoso' },
-          'petugas2': { pass: 'petugas123', role: 'petugas', name: 'Siti Aminah' }
-      };
+      // Data Pengguna (Sekarang diambil dari Firebase)
+      let systemUsers = {};
 
       let map, marker, dashMap, dashMarkersGroup;
       let records = [];
@@ -1107,8 +1198,38 @@
       };
       
       window.onload = function() {
-        checkAuth();
+        fetchUsers().then(() => {
+          checkAuth();
+        });
       };
+
+      async function fetchUsers() {
+        try {
+          const response = await fetch(`${FIREBASE_URL}/users.json`);
+          const data = await response.json();
+          systemUsers = data || {};
+          
+          // Ensure at least one admin exists if database is empty
+          if (Object.keys(systemUsers).length === 0) {
+            const defaultAdmin = {
+                username: 'admin',
+                pass: 'admin123',
+                role: 'admin',
+                name: 'Administrator',
+                permissions: { table: true, laporan: true }
+            };
+            await fetch(`${FIREBASE_URL}/users/admin.json`, {
+                method: 'PUT',
+                body: JSON.stringify(defaultAdmin)
+            });
+            systemUsers['admin'] = defaultAdmin;
+          }
+          renderUsersTable();
+        } catch (error) {
+          console.error("Gagal mengambil data user:", error);
+          showToast("Gagal memuat pengaturan akun.", "error");
+        }
+      }
 
       function handleLogin(e) {
           e.preventDefault();
@@ -1120,11 +1241,26 @@
           btn.disabled = true;
 
           setTimeout(() => {
-              if (validUsers[user] && validUsers[user].pass === pass) {
+              let foundUser = null;
+              let foundKey = null;
+
+              for (const key in systemUsers) {
+                  if (systemUsers[key].username === user) {
+                      foundUser = systemUsers[key];
+                      foundKey = key;
+                      break;
+                  }
+              }
+
+              if (foundUser && foundUser.pass === pass) {
                   localStorage.setItem('isLoggedIn', 'true');
-                  localStorage.setItem('loggedUser', validUsers[user].name);
-                  localStorage.setItem('userRole', validUsers[user].role);
-                  showToast(`Selamat datang, ${validUsers[user].name}!`, "success");
+                  localStorage.setItem('loggedUser', foundUser.name);
+                  localStorage.setItem('userRole', foundUser.role);
+                  localStorage.setItem('userId', foundKey);
+                  // Simpan permissions ke localStorage
+                  localStorage.setItem('userPermissions', JSON.stringify(foundUser.permissions || { table: false, laporan: false }));
+
+                  showToast(`Selamat datang, ${foundUser.name}!`, "success");
                   document.getElementById('login-password').value = ""; // Reset security
                   checkAuth();
               } else {
@@ -1140,6 +1276,8 @@
               localStorage.removeItem('isLoggedIn');
               localStorage.removeItem('loggedUser');
               localStorage.removeItem('userRole');
+              localStorage.removeItem('userId');
+              localStorage.removeItem('userPermissions');
               showToast("Anda telah keluar dari sesi.", "info");
               checkAuth();
           }
@@ -1148,6 +1286,7 @@
       function applyRolePermissions() {
           const role = localStorage.getItem('userRole');
           const name = localStorage.getItem('loggedUser');
+          const permissions = JSON.parse(localStorage.getItem('userPermissions') || '{}');
           
           if(document.getElementById('display-nama')) {
               document.getElementById('display-nama').innerText = name || "Pengguna";
@@ -1155,11 +1294,32 @@
           }
           
           if (role === 'petugas') {
-              // Hide Audit and Laporan tabs untuk petugas
+              // Histori selalu hidden untuk petugas
               if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.add('hidden');
-              if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.add('hidden');
               if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.add('hidden');
-              if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.add('hidden');
+              
+              // Users tab selalu hidden untuk petugas
+              if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.add('hidden');
+              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('flex');
+              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('hidden');
+
+              // Atur akses Table berdasarkan permissions
+              if(permissions.table) {
+                  if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
+                  if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
+              } else {
+                  if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.add('hidden');
+                  if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.add('hidden');
+              }
+
+              // Atur akses Laporan berdasarkan permissions
+              if(permissions.laporan) {
+                  if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
+                  if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
+              } else {
+                  if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.add('hidden');
+                  if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.add('hidden');
+              }
               
               // Kunci input nama petugas
               const inputPetugas = document.getElementById('namaPetugas');
@@ -1168,19 +1328,42 @@
                   inputPetugas.setAttribute('readonly', 'true');
                   inputPetugas.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
               }
+
+              // Sembunyikan filter dropdown petugas di tab laporan
+              const rekapDropdown = document.getElementById('ctrl-lap-rekap');
+              if(rekapDropdown) {
+                  const selectElement = rekapDropdown.querySelector('select');
+                  if(selectElement) selectElement.parentElement.classList.add('hidden');
+              }
               
               switchTab('form'); // Default tab untuk petugas
           } else {
               // Tampilkan semua untuk admin
               if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.remove('hidden');
-              if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
               if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.remove('hidden');
+              
+              if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
+              if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
+              
+              if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
               if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
+
+              // Tampilkan tab Users untuk Admin
+              if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.remove('hidden');
+              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('hidden');
+              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('flex');
               
               const inputPetugas = document.getElementById('namaPetugas');
               if(inputPetugas) {
                   inputPetugas.removeAttribute('readonly');
                   inputPetugas.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+              }
+
+              // Tampilkan filter dropdown petugas di tab laporan
+              const rekapDropdown = document.getElementById('ctrl-lap-rekap');
+              if(rekapDropdown) {
+                  const selectElement = rekapDropdown.querySelector('select');
+                  if(selectElement) selectElement.parentElement.classList.remove('hidden');
               }
               
               switchTab('dashboard'); // Default tab untuk admin
@@ -1225,17 +1408,17 @@
       }
 
       window.switchTab = function(tab) {
-        ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan'].forEach(id => {
+        ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan', 'view-users'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
 
-        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan'].forEach(id => {
+        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan', 'tab-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
-            if (btn) btn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white";
+            if (btn) btn.className = btn.className.replace("bg-indigo-600 shadow text-white", "text-indigo-200 hover:text-white");
         });
 
-        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan'].forEach(id => {
+        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan', 'mob-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.className = btn.className.replace('text-indigo-600', 'text-slate-400');
         });
@@ -1244,7 +1427,9 @@
         if (activeView) activeView.classList.remove('hidden');
 
         const activeTabBtn = document.getElementById(`tab-btn-${tab}`);
-        if (activeTabBtn) activeTabBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow";
+        if (activeTabBtn) {
+            activeTabBtn.className = activeTabBtn.className.replace("text-indigo-200 hover:text-white", "text-white bg-indigo-600 shadow");
+        }
 
         const mobBtn = document.getElementById(`mob-btn-${tab}`);
         if (mobBtn) mobBtn.className = mobBtn.className.replace('text-slate-400', 'text-indigo-600');
@@ -1258,6 +1443,7 @@
         if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
         if (tab === 'audit') fetchAuditLogs();
         if (tab === 'laporan') resetLaporanSearch();
+        if (tab === 'users') fetchUsers(); // Refresh data users saat tab dibuka
       };
 
       function fetchRecordsFromGoogleSheet(isManualTrigger = false) {
@@ -1444,6 +1630,11 @@
       function deleteRecord(id) {
         const target = records.find(r => r.id === id);
         const namaUsahaTarget = target ? target.namaUsaha : "Objek";
+        
+        if (localStorage.getItem('userRole') !== 'admin') {
+            showToast("Anda tidak memiliki akses untuk menghapus data.", "error");
+            return;
+        }
 
         if(confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) {
             showToast("Menghapus data dari server...", "info");
@@ -1826,10 +2017,16 @@
                 tagHtml += `<span class="px-1.5 py-0.5 ${color} border rounded text-[8px] font-extrabold inline-block mr-1 mt-1.5 uppercase tracking-wide">${p}</span>`;
             });
 
-            // RBAC Aksi Tabel
             const role = localStorage.getItem('userRole');
-            const btnDelete = role === 'admin' ? `<button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>` : '';
-            const btnLaporan = role === 'admin' ? `<button onclick="viewLaporan('${r.id}')" class="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg" title="Cetak"><i class="fa-solid fa-print text-xs"></i></button>` : '';
+            
+            // Tombol Delete: Aktif untuk admin, Disabled untuk petugas
+            const btnDelete = role === 'admin' 
+                ? `<button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>` 
+                : `<button disabled class="p-2 bg-slate-100 text-slate-300 rounded-lg cursor-not-allowed opacity-50" title="Tidak ada akses hapus"><i class="fa-solid fa-trash text-xs"></i></button>`;
+            
+            const btnLaporan = role === 'admin' || (role === 'petugas' && JSON.parse(localStorage.getItem('userPermissions') || '{}').laporan)
+                ? `<button onclick="viewLaporan('${r.id}')" class="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg" title="Cetak"><i class="fa-solid fa-print text-xs"></i></button>` 
+                : '';
 
             const btnActions = `
                 <button onclick="addAnotherReklame('${r.id}')" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg" title="Tambah Reklame"><i class="fa-solid fa-plus text-xs"></i></button>
@@ -2035,11 +2232,19 @@
             document.getElementById('ctrl-lap-rekap').classList.add('flex');
             document.getElementById('btn-lap-rekap').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
 
-            const select = document.getElementById('selectPetugas');
-            select.innerHTML = '<option value="">-- Semua Petugas --</option>';
-            const officers = [...new Set(records.filter(r => r.namaPetugas && r.namaPetugas !== '-').map(r => r.namaPetugas))];
-            officers.forEach(name => { select.innerHTML += `<option value="${name}">${name}</option>`; });
-            generateLaporanRekap('');
+            const role = localStorage.getItem('userRole');
+            const loggedUser = localStorage.getItem('loggedUser');
+            
+            if (role === 'admin') {
+                const select = document.getElementById('selectPetugas');
+                select.innerHTML = '<option value="">-- Semua Petugas --</option>';
+                const officers = [...new Set(records.filter(r => r.namaPetugas && r.namaPetugas !== '-').map(r => r.namaPetugas))];
+                officers.forEach(name => { select.innerHTML += `<option value="${name}">${name}</option>`; });
+                generateLaporanRekap('');
+            } else {
+                // Untuk petugas, langsung generate berdasarkan namanya saja
+                generateLaporanRekap(loggedUser);
+            }
         }
       }
 
@@ -2411,6 +2616,147 @@
         
         hitungKalkulatorPajak();
         showToast(`Formulir siap untuk mengubah data ${wpData.namaUsaha}`, "success");
+      }
+      
+      function renderUsersTable() {
+          const tbody = document.getElementById('users-table-body');
+          tbody.innerHTML = '';
+          
+          if (Object.keys(systemUsers).length === 0) {
+              tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 font-medium">Belum ada data petugas.</td></tr>`;
+              return;
+          }
+
+          for (const key in systemUsers) {
+              const u = systemUsers[key];
+              if(u.role === 'admin') continue; // Hide admin from table
+
+              const permissions = u.permissions || {};
+              let badges = `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-bold mr-1">Pendataan</span>`;
+              if (permissions.table) badges += `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-bold mr-1">Data Objek</span>`;
+              if (permissions.laporan) badges += `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-bold">Laporan</span>`;
+
+              const tr = document.createElement('tr');
+              tr.className = "hover:bg-slate-50 transition";
+              tr.innerHTML = `
+                  <td class="px-4 py-3 font-bold text-slate-800">${u.name}</td>
+                  <td class="px-4 py-3 font-mono text-xs text-slate-600">${u.username}</td>
+                  <td class="px-4 py-3">
+                      <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] uppercase font-bold text-center">Petugas</span>
+                  </td>
+                  <td class="px-4 py-3">${badges}</td>
+                  <td class="px-4 py-3 text-center whitespace-nowrap">
+                      <button onclick="editUser('${key}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg mr-1" title="Edit Akun"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                      <button onclick="deleteUser('${key}', '${u.name}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus Akun"><i class="fa-solid fa-trash text-xs"></i></button>
+                  </td>
+              `;
+              tbody.appendChild(tr);
+          }
+      }
+
+      function openUserModal() {
+          document.getElementById('userForm').reset();
+          document.getElementById('userId').value = "";
+          document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>Tambah Akun Petugas`;
+          document.getElementById('userPassword').setAttribute('required', 'true');
+          
+          // Reset Checkboxes
+          document.getElementById('access-table').checked = false;
+          document.getElementById('access-laporan').checked = false;
+
+          document.getElementById('userModal').classList.remove('hidden');
+          document.getElementById('userModal').classList.add('flex');
+      }
+
+      function closeUserModal() {
+          document.getElementById('userModal').classList.add('hidden');
+          document.getElementById('userModal').classList.remove('flex');
+      }
+
+      function editUser(key) {
+          const u = systemUsers[key];
+          if (!u) return;
+
+          document.getElementById('userId').value = key;
+          document.getElementById('userName').value = u.name;
+          document.getElementById('userUsername').value = u.username;
+          
+          // Password not required for edit unless they want to change it
+          document.getElementById('userPassword').removeAttribute('required');
+          document.getElementById('userPassword').value = "";
+          
+          document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i>Edit Akun Petugas`;
+
+          // Set permissions
+          const p = u.permissions || {};
+          document.getElementById('access-table').checked = p.table || false;
+          document.getElementById('access-laporan').checked = p.laporan || false;
+
+          document.getElementById('userModal').classList.remove('hidden');
+          document.getElementById('userModal').classList.add('flex');
+      }
+
+      function saveUser(event) {
+          event.preventDefault();
+          const btn = document.getElementById('btnSaveUser');
+          btn.disabled = true;
+          btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+
+          const userId = document.getElementById('userId').value || 'USER-' + new Date().getTime();
+          const passInput = document.getElementById('userPassword').value;
+          
+          const userData = {
+              username: document.getElementById('userUsername').value,
+              role: 'petugas', // Force role to petugas from this UI
+              name: document.getElementById('userName').value,
+              permissions: {
+                  table: document.getElementById('access-table').checked,
+                  laporan: document.getElementById('access-laporan').checked
+              }
+          };
+
+          // If editing and password is provided, update it. If new, use provided.
+          if (passInput) {
+              userData.pass = passInput;
+          } else if (systemUsers[userId] && systemUsers[userId].pass) {
+              userData.pass = systemUsers[userId].pass; // Keep old password
+          }
+
+          fetch(`${FIREBASE_URL}/users/${userId}.json`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(userData)
+          })
+          .then(response => {
+              if(!response.ok) throw new Error("Gagal menyimpan data akun");
+              showToast("Akun petugas berhasil disimpan!", "success");
+              closeUserModal();
+              return fetchUsers(); // Refresh table
+          })
+          .catch(err => {
+              showToast("Error sistem: " + err.message, "error");
+          })
+          .finally(() => {
+              btn.disabled = false;
+              btn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
+          });
+      }
+
+      function deleteUser(key, name) {
+          if(confirm(`Apakah Anda yakin ingin menghapus akses login untuk petugas "${name}"?`)) {
+              showToast("Menghapus akun...", "info");
+              fetch(`${FIREBASE_URL}/users/${key}.json`, {
+                  method: 'DELETE'
+              })
+              .then(response => {
+                  if(!response.ok) throw new Error("Gagal menghapus akun");
+                  showToast("Akun berhasil dihapus!", "success");
+                  fetchUsers(); // Refresh table
+              })
+              .catch(err => {
+                  showToast("Error koneksi sistem: " + err.message, "error");
+              });
+          }
       }
     </script>
   </body>
