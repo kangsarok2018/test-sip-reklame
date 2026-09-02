@@ -1847,17 +1847,34 @@
       function updateDashboard() {
         document.getElementById('dash-total-objek').innerText = records.length;
 
-        const terdaftar = records.filter(r => r.statusRegistrasi === "SUDAH_TERDAFTAR").length;
+        const terdaftarObjek = records.filter(r => r.statusRegistrasi === "SUDAH_TERDAFTAR").length;
+        
+        // Menghitung jumlah Wajib Pajak (NPWPD) yang unik
+        const uniqueNPWPDs = new Set();
+        records.forEach(r => {
+            if (r.statusRegistrasi === "SUDAH_TERDAFTAR") {
+                const npwpd = (r.npwpd || "").trim();
+                if (npwpd && npwpd !== "-") {
+                    uniqueNPWPDs.add(npwpd);
+                } else {
+                    // Jika status terdaftar tapi NPWPD kosong/strip, tetap dihitung per entitas ID-nya
+                    uniqueNPWPDs.add(r.id); 
+                }
+            }
+        });
+        const terdaftarUnik = uniqueNPWPDs.size;
+
         const belum = records.filter(r => r.statusRegistrasi === "BELUM_TERDAFTAR").length;
         const aktif = records.filter(r => r.statusKeaktifan === "AKTIF").length;
         const tutup = records.filter(r => r.statusKeaktifan === "TIDAK_AKTIF").length;
 
-        document.getElementById('dash-total-terdaftar').innerText = terdaftar;
+        document.getElementById('dash-total-terdaftar').innerText = terdaftarUnik;
         document.getElementById('dash-total-belum').innerText = belum;
         document.getElementById('dash-total-aktif').innerText = aktif;
         document.getElementById('dash-total-tutup').innerText = tutup;
 
-        const pct = records.length > 0 ? (terdaftar / records.length) * 100 : 0;
+        // Progress bar tetap menggunakan perbandingan jumlah *objek*
+        const pct = records.length > 0 ? (terdaftarObjek / records.length) * 100 : 0;
         document.getElementById('bar-terdaftar').style.width = pct + "%";
 
         if (dashMarkersGroup) {
