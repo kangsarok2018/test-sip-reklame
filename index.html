@@ -4,9 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIP-REKLAME - Sistem Pendataan Objek Pajak Reklame</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Leaflet CSS & JS for GIS Geotagging Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <style>
@@ -33,6 +37,7 @@
         background: #94a3b8;
       }
 
+      /* PENGATURAN CETAK / PRINT */
       @media print {
         @page {
           size: A4;
@@ -71,6 +76,7 @@
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased pb-20 sm:pb-0">
+    <!-- WADAH KHUSUS CETAK -->
     <div id="print-container" class="hidden"></div>
 
     <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-50 print:hidden">
@@ -613,10 +619,17 @@
           </div>
 
           <div id="ctrl-lap-detail" class="flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="w-full sm:w-2/3">
-              <select id="selectLaporan" onchange="generateLaporan(this.value)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium">
-                <option value="">-- Pilih Nama Usaha / Wajib Pajak --</option>
-              </select>
+            <div class="w-full sm:w-2/3 relative">
+              <input type="hidden" id="selectedLaporanId" value="" />
+              <input
+                type="text"
+                id="searchLaporanInput"
+                onkeyup="searchLaporanData(this.value)"
+                placeholder="Ketik Nama Usaha / Wajib Pajak untuk dicetak..."
+                class="w-full px-4 py-2.5 pl-10 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium shadow-sm"
+              />
+              <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+              <div id="searchLaporanResults" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scrollbar divide-y divide-slate-100 z-50"></div>
             </div>
             <button onclick="cetakArea('kertasLaporan')" class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition flex items-center justify-center gap-2">
               <i class="fa-solid fa-print"></i> Cetak A4
@@ -974,6 +987,7 @@
         fetchRecordsFromGoogleSheet(); 
       };
 
+      // --- NAVIGASI TAB (GLOBAL EXPOSED) ---
       window.switchTab = function(tab) {
         ['view-dashboard', 'view-form', 'view-table', 'view-laporan'].forEach(id => {
             const el = document.getElementById(id);
@@ -1001,7 +1015,7 @@
 
         if (tab === 'dashboard') setTimeout(() => { if (dashMap) dashMap.invalidateSize(); }, 200);
         if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
-        if (tab === 'laporan') populateSelectLaporan();
+        if (tab === 'laporan') resetLaporanSearch();
       };
 
       function fetchRecordsFromGoogleSheet(isManualTrigger = false) {
@@ -1548,14 +1562,58 @@
         reader.readAsDataURL(file);
       }
 
-      function populateSelectLaporan() {
-        const select = document.getElementById('selectLaporan');
-        select.innerHTML = '<option value="">-- Pilih Usaha (Untuk Cetak Detail) --</option>';
+      function resetLaporanSearch() {
+        document.getElementById('selectedLaporanId').value = "";
+        document.getElementById('searchLaporanInput').value = "";
+        document.getElementById('kertasLaporan').classList.add('hidden');
+      }
 
-        const limitedRecords = [...records].slice(0, 100);
-        limitedRecords.forEach(r => {
-            select.innerHTML += `<option value="${r.id}">${r.namaUsaha} - ${r.judulReklame}</option>`;
+      function searchLaporanData(query) {
+        const resultsContainer = document.getElementById('searchLaporanResults');
+        resultsContainer.innerHTML = '';
+
+        if (!query.trim()) {
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+
+        const cleanQuery = query.toLowerCase();
+        const matches = records.filter(r =>
+            (r.namaUsaha || "").toLowerCase().includes(cleanQuery) ||
+            (r.namaWP || "").toLowerCase().includes(cleanQuery) ||
+            (r.judulReklame || "").toLowerCase().includes(cleanQuery) ||
+            (r.npwpd && String(r.npwpd).toLowerCase().includes(cleanQuery))
+        );
+
+        if (matches.length === 0) {
+            resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-400 text-center">Data tidak ditemukan</div>`;
+            resultsContainer.classList.remove('hidden');
+            return;
+        }
+
+        matches.forEach(m => {
+            const item = document.createElement('div');
+            item.className = "p-3 hover:bg-indigo-50 cursor-pointer flex items-center justify-between text-slate-700 transition";
+            item.onclick = () => selectLaporanItem(m);
+            item.innerHTML = `
+                <div>
+                    <span class="text-xs font-bold text-indigo-950 block">${m.namaUsaha}</span>
+                    <span class="text-[11px] text-slate-600 block">${m.judulReklame}</span>
+                    <span class="text-[10px] text-slate-400">WP: ${m.namaWP} | ${m.npwpd !== '-' ? m.npwpd : 'NIK: '+m.nik}</span>
+                </div>
+                <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-[9px] uppercase font-bold whitespace-nowrap">Pilih</span>
+            `;
+            resultsContainer.appendChild(item);
         });
+
+        resultsContainer.classList.remove('hidden');
+      }
+
+      function selectLaporanItem(item) {
+        document.getElementById('selectedLaporanId').value = item.id;
+        document.getElementById('searchLaporanInput').value = `${item.namaUsaha} - ${item.judulReklame}`;
+        document.getElementById('searchLaporanResults').classList.add('hidden');
+        generateLaporan(item.id);
       }
 
       function toggleLaporanType(type) {
@@ -1571,7 +1629,7 @@
             document.getElementById('ctrl-lap-detail').classList.remove('hidden');
             document.getElementById('ctrl-lap-detail').classList.add('flex');
             document.getElementById('btn-lap-detail').className = "px-4 py-2 bg-indigo-600 text-white text-xs sm:text-sm font-bold rounded-lg flex-1 sm:flex-none";
-            populateSelectLaporan();
+            resetLaporanSearch();
         } else {
             document.getElementById('ctrl-lap-rekap').classList.remove('hidden');
             document.getElementById('ctrl-lap-rekap').classList.add('flex');
@@ -1620,8 +1678,12 @@
       function viewLaporan(id) {
         switchTab('laporan');
         toggleLaporanType('detail');
-        document.getElementById('selectLaporan').value = id;
-        generateLaporan(id);
+        const r = records.find(item => item.id === id);
+        if (r) {
+            document.getElementById('selectedLaporanId').value = r.id;
+            document.getElementById('searchLaporanInput').value = `${r.namaUsaha} - ${r.judulReklame}`;
+            generateLaporan(r.id);
+        }
       }
 
       function generateLaporanRekap(petugasName) {
@@ -1899,10 +1961,7 @@
         document.getElementById('ketinggian').value = wpData.ketinggian || "";
         document.getElementById('lamaPemasangan').value = wpData.lamaPemasangan || 1;
 
-        // Memecah string jenisPajak tersimpan menjadi array (dipisah dengan koma)
         const savedPajakList = wpData.jenisPajak ? wpData.jenisPajak.split(',').map(p => p.trim()) : ["Pajak Reklame"];
-        
-        // Menandai checkbox yang sesuai agar dapat mencentang lebih dari satu kewajiban pajak dengan tepat
         document.querySelectorAll('input[name="chkPajak"]').forEach(cb => {
             cb.checked = savedPajakList.includes(cb.value);
         });
