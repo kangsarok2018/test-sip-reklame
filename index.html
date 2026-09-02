@@ -899,19 +899,19 @@
       </button>
     </div>
 
+    <!-- Leaflet JS & jsPDF Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
     <script>
-      const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/; 
+      const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
 
       let map, marker, dashMap, dashMarkersGroup;
       let records = [];
       let currentPage = 1;
       const itemsPerPage = 10;
 
-      // KAMUS PEMETAAN OTOMATIS AGAR KODE SINGKAT BERUBAH JADI TEKS LENGKAP
       const JENIS_REKLAME_MAP = {
         '18A': '[18A] REKLAME HURUF DIBAWAH 50 CM',
         '3B': '[3B] REKLAME BALEHO NON PERMANEN NON KAIN',
@@ -979,7 +979,37 @@
         fetchRecordsFromGoogleSheet(); 
       };
 
-      // FUNGSI READ DARI FIREBASE + MAPPER OTOMATIS
+      // --- NAVIGASI TAB (GLOBAL EXPOSED) ---
+      window.switchTab = function(tab) {
+        ['view-dashboard', 'view-form', 'view-table', 'view-laporan'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+
+        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-laporan'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white";
+        });
+
+        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-laporan'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.className = btn.className.replace('text-indigo-600', 'text-slate-400');
+        });
+
+        const activeView = document.getElementById(`view-${tab}`);
+        if (activeView) activeView.classList.remove('hidden');
+
+        const activeTabBtn = document.getElementById(`tab-btn-${tab}`);
+        if (activeTabBtn) activeTabBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow";
+
+        const mobBtn = document.getElementById(`mob-btn-${tab}`);
+        if (mobBtn) mobBtn.className = mobBtn.className.replace('text-slate-400', 'text-indigo-600');
+
+        if (tab === 'dashboard') setTimeout(() => { if (dashMap) dashMap.invalidateSize(); }, 200);
+        if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+        if (tab === 'laporan') populateSelectLaporan();
+      };
+
       function fetchRecordsFromGoogleSheet(isManualTrigger = false) {
         if (isManualTrigger) showToast("Mengambil data realtime dari Firebase...", "info");
 
@@ -1111,31 +1141,6 @@
       function changePage(delta) {
         currentPage += delta;
         renderTable();
-      }
-
-      function switchTab(tab) {
-        ['view-dashboard', 'view-form', 'view-table', 'view-laporan'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
-        });
-
-        ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-laporan'].forEach(id => {
-            document.getElementById(id).className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white";
-        });
-
-        ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-laporan'].forEach(id => {
-            const btn = document.getElementById(id);
-            btn.className = btn.className.replace('text-indigo-600', 'text-slate-400');
-        });
-
-        document.getElementById(`view-${tab}`).classList.remove('hidden');
-        document.getElementById(`tab-btn-${tab}`).className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow";
-
-        const mobBtn = document.getElementById(`mob-btn-${tab}`);
-        mobBtn.className = mobBtn.className.replace('text-slate-400', 'text-indigo-600');
-
-        if (tab === 'dashboard') setTimeout(() => { if (dashMap) dashMap.invalidateSize(); }, 200);
-        if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
-        if (tab === 'laporan') populateSelectLaporan();
       }
 
       function initMap() {
@@ -1838,11 +1843,10 @@
           hitungKalkulatorPajak();
       }
 
-      // --- KALKULATOR PAJAK PRESISI SESUAI PERDA ---
       function hitungKalkulatorPajak() {
           const panjang = parseFloat(document.getElementById('panjang').value) || 0;
           const lebar = parseFloat(document.getElementById('lebar').value) || 0;
-          const sisi = parseInt(document.getElementById('sisi').value) || 1; // Mk (Muka)
+          const sisi = parseInt(document.getElementById('sisi').value) || 1;
           const kelasJalanVal = document.getElementById('kelasJalan').value;
           
           let njopr = parseFloat(document.getElementById('njopr').value) || 0;
@@ -1853,10 +1857,10 @@
               document.getElementById('njopr').value = njopr;
           }
 
-          const kt = parseFloat(document.getElementById('ketinggian').value) || 0; // Kt dalam persen (misal: 20)
-          const lp = parseFloat(document.getElementById('lamaPemasangan').value) || 1; // LP (Lama Pemasangan)
+          const kt = parseFloat(document.getElementById('ketinggian').value) || 0;
+          const lp = parseFloat(document.getElementById('lamaPemasangan').value) || 1;
 
-          let kj = 2.5; // Default Pengaman Kawasan C
+          let kj = 2.5;
           const valUpper = kelasJalanVal.toUpperCase();
           if (valUpper.includes("NEGARA") || valUpper.includes("3,5") || valUpper.includes("3.5")) {
               kj = 3.5;
@@ -1868,22 +1872,20 @@
               kj = 2.0;
           }
 
-          const luas = panjang * lebar; // P x L
-          const persentaseKt = kt / 100; // Mengubah desimal persentase ketinggian (0.2)
+          const luas = panjang * lebar;
+          const persentaseKt = kt / 100;
 
           const komponenKt = njopr + (njopr * persentaseKt);
           const nsr = luas * sisi * (komponenKt * kj * lp);
           
-          const tarifPajak = 0.25; // Tarif Pajak Daerah 25%
+          const tarifPajak = 0.25;
           const totalPajak = nsr * tarifPajak;
 
-          // Output UI
           document.getElementById('calc-luas').innerText = luas.toFixed(2) + " m²";
           document.getElementById('calc-nsr').innerText = "Rp " + Math.round(nsr).toLocaleString('id-ID');
           document.getElementById('calc-total').innerText = "Rp " + Math.round(totalPajak).toLocaleString('id-ID');
       }
 
-      // --- SINKRONISASI AMAN SAAT EDIT DATA OBJEK ---
       function selectWPFromDatabase(wpData) {
         document.getElementById('recordId').value = wpData.id || "";
         document.getElementById('statusRegistrasi').value = wpData.statusRegistrasi || "SUDAH_TERDAFTAR";
@@ -1913,7 +1915,6 @@
             document.getElementById('field-alamat-wp').classList.remove('hidden');
         }
 
-        // Panggil updateNJOPR agar nilai NJOPR dan Kalkulator langsung menghitung ulang secara otomatis
         updateNJOPR();
 
         if (wpData.lat && wpData.lng) {
