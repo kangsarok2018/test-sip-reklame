@@ -992,24 +992,22 @@
       };
       
       // RUN ON LOAD
-     window.onload = function() {
-        // Cek login via SessionStorage terlebih dahulu (TANPA meload Peta)
+      window.onload = function() {
+        // PRIORITY: Check authentication FIRST to prevent UI flashes
         checkAuth();
 
-        // Setup Event Listener untuk Tanggal Pemasangan & Jatuh Tempo
+        // TAHAP 2: Auto kalkulasi Tgl Jatuh Tempo
         const tglPasangInput = document.getElementById('tanggalPasang');
         if(tglPasangInput) {
             tglPasangInput.addEventListener('change', function(e) {
                 const jtInput = document.getElementById('tanggalJatuhTempo');
                 if(e.target.value && (!jtInput.value || jtInput.value === "")) {
                     const date = new Date(e.target.value);
-                    date.setFullYear(date.getFullYear() + 1); // Default otomatis 1 tahun kemudian
+                    date.setFullYear(date.getFullYear() + 1);
                     jtInput.value = date.toISOString().split('T')[0];
                 }
             });
         }
-        
-        fetchUsers(); 
       };
 
       // AUTHENTICATION LOGIC
@@ -1034,34 +1032,40 @@
       }
 
       function checkAuth() {
-        const loggedUserStr = sessionStorage.getItem('loggedUser');
-        const loginContainer = document.getElementById('login-container');
-        const mainApp = document.getElementById('main-app');
+        const loggedUser = sessionStorage.getItem('loggedUser');
+        const role = sessionStorage.getItem('userRole');
 
-        if (loggedUserStr) {
-            currentUser = JSON.parse(loggedUserStr);
-            loginContainer.classList.add('hidden');
-            mainApp.classList.remove('hidden');
-
-            document.getElementById('display-user-name').innerText = currentUser.namaLengkap.toUpperCase();
-            document.getElementById('display-user-role').innerText = currentUser.role.toUpperCase();
-
-            applyRolePermissions();
-
-            // Inisialisasi Peta HANYA JIKA user sudah berhasil login dan masuk ke Dashboard
-            if (typeof L !== 'undefined') {
-                if (!map) initMap();
-                if (!dashMap) initDashboardMap();
-            } else {
-                console.warn("Library Peta Leaflet belum siap.");
-            }
-
-            fetchRecordsFromGoogleSheet();
-            switchTab('dashboard'); // Selalu arahkan ke dashboard setelah login
+        if (!loggedUser || !role) {
+            // Not logged in -> Show login overlay, hide app
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('flex');
         } else {
-            // Jika belum login, pastikan hanya form login yang muncul
-            loginContainer.classList.remove('hidden');
-            mainApp.classList.add('hidden');
+            // Logged in -> Hide overlay, show app
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('flex');
+            
+            document.getElementById('user-display-name').innerText = loggedUser;
+            document.getElementById('user-display-role').innerText = role === 'admin' ? 'ADMINISTRATOR' : 'PETUGAS LAPANGAN';
+
+            // APPLY ROLE RESTRICTIONS
+            applyRolePermissions();
+            
+            // Re-render table if data already loaded (vital for disabling delete button instantly on hot-swap)
+            if(records.length > 0) renderTable();
+
+            // INITIALIZE MAPS & DATA (Only once per session)
+            if (!isAppInitialized) {
+                initMap();
+                initDashboardMap();
+                fetchRecordsFromGoogleSheet();
+                fetchUsers();
+                isAppInitialized = true;
+                
+                // Set default Tab (Dashboard)
+                switchTab('dashboard');
+            }
         }
       }
 
@@ -1130,75 +1134,31 @@
         }
       }
 
-      function login() {
-        const u = document.getElementById('loginUsername').value.trim().toLowerCase();
+      function login(e) {
+        e.preventDefault();
+        const u = document.getElementById('loginUsername').value;
         const p = document.getElementById('loginPassword').value;
 
-        if (!u || !p) {
-            showToast("Username dan Password wajib diisi!", "error");
-            return;
-        }
-
-        const btn = document.getElementById('btnLogin');
-        const btnText = document.getElementById('btnLoginText');
-        btn.disabled = true;
-        btnText.innerText = "Memeriksa...";
-
+        // Fetch users inline to authenticate
         fetch(`${FIREBASE_URL}/users.json`)
             .then(res => res.json())
-            .then(users => {
-                let userFound = null;
-                
-                // Cari apakah user ada di database
-                if (users) {
-                    userFound = Object.values(users).find(usr => usr.username === u && usr.password === p);
+            .then(data => {
+                let found = false;
+                if(data) {
+                    for(let key in data) {
+                        const user = data[key];
+                        if(user.username === u && user.password === p) {
+                            sessionStorage.setItem('loggedUser', user.name);
+                            sessionStorage.setItem('userRole', user.role);
+                            sessionStorage.setItem('userPermissions', JSON.stringify(user.permissions || {}));
+                            found = true;
+                            
+                            document.getElementById('loginPassword').value = '';
+                            checkAuth();
+                            break;
+                        }
+                    }
                 }
-
-                if (userFound) {
-                    // Jika cocok, set sesi dan masuk
-                    sessionStorage.setItem('loggedUser', JSON.stringify(userFound));
-                    showToast(`Selamat datang, ${userFound.namaLengkap}!`, "success");
-                    
-                    // Bersihkan form login
-                    document.getElementById('loginUsername').value = "";
-                    document.getElementById('loginPassword').value = "";
-                    
-                    checkAuth();
-                } else if (u === 'admin' && p === 'admin123') {
-                    // FALLBACK DARURAT: Jika "admin" diketik tapi tidak ditemukan di DB, buatkan paksa!
-                    const defaultAdmin = {
-                        id: "USR-ADMIN-001",
-                        namaLengkap: "Administrator",
-                        username: "admin",
-                        password: "admin123",
-                        role: "admin",
-                        hakAkses: ["pendataan", "lihat_data", "laporan"]
-                    };
-                    
-                    fetch(`${FIREBASE_URL}/users/${defaultAdmin.id}.json`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(defaultAdmin)
-                    }).then(() => {
-                        sessionStorage.setItem('loggedUser', JSON.stringify(defaultAdmin));
-                        showToast("Akun admin dipulihkan dan berhasil masuk!", "success");
-                        document.getElementById('loginUsername').value = "";
-                        document.getElementById('loginPassword').value = "";
-                        checkAuth();
-                    });
-                } else {
-                    showToast("Username atau Password salah!", "error");
-                }
-            })
-            .catch(err => {
-                showToast("Terjadi kesalahan koneksi jaringan!", "error");
-                console.error(err);
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btnText.innerText = "Masuk Sistem";
-            });
-      }
                 
                 // FALLBACK JIKA DATABASE KOSONG: Buat otomatis akun admin pertama kali
                 if(!found && !data && u === 'admin' && p === 'admin123') {
@@ -1214,7 +1174,7 @@
 
                 if(!found) showToast("Username atau Password salah!", "error");
             }).catch(err => showToast("Koneksi gagal", "error"));
-  
+      }
 
       function logout() {
         sessionStorage.removeItem('loggedUser');
