@@ -881,7 +881,7 @@
                 <thead>
                   <tr class="bg-slate-100 text-slate-700">
                     <th class="border border-slate-300 p-1.5 text-center w-8">No</th>
-                    <th class="border border-slate-300 p-1.5 w-40">Wajib Pajak & Alamat WP</th>
+                    <th class="border border-slate-300 p-1.5 w-40">Wajib Pajak, NIK, No. HP & Alamat WP</th>
                     <th class="border border-slate-300 p-1.5 w-40">Usaha & Alamat Usaha</th>
                     <th class="border border-slate-300 p-1.5">Jenis & Spesifikasi</th>
                     <th class="border border-slate-300 p-1.5 text-center w-20">Ukuran</th>
@@ -2517,7 +2517,12 @@
             html += `
                 <tr>
                     <td class="border border-slate-300 p-1.5 text-center align-top">${idx + 1}</td>
-                    <td class="border border-slate-300 p-1.5 align-top font-medium leading-tight">${escapeHTML(r.namaWP)}<br><span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatWP)}</span></td>
+                    <td class="border border-slate-300 p-1.5 align-top font-medium leading-tight">
+                        <span class="font-bold text-slate-900">${escapeHTML(r.namaWP || "-")}</span>
+                        <span class="text-slate-600 font-mono text-[9px] block mt-0.5">NIK: ${escapeHTML(r.nik || "-")}</span>
+                        <span class="text-slate-600 font-mono text-[9px] block">No. HP: ${escapeHTML(r.nomorHP || "-")}</span>
+                        <span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatWP || "-")}</span>
+                    </td>
                     <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold text-indigo-900">${escapeHTML(r.namaUsaha)}</span>${badge}<span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatUsaha)}</span></td>
                     <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold">${escapeHTML(r.judulReklame)}</span><br><span class="text-slate-700 font-medium block mt-0.5">${escapeHTML(r.jenisReklame)}</span></td>
                     <td class="border border-slate-300 p-1.5 text-center align-top leading-tight">
