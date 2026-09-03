@@ -788,8 +788,16 @@
                         <td class="py-1 font-bold text-slate-800" id="lap-nama-wp"></td>
                       </tr>
                       <tr>
-                        <td class="py-1 text-slate-500" id="lap-label-id">ID</td>
-                        <td class="py-1 font-mono font-bold text-slate-800" id="lap-npwpd-nik"></td>
+                        <td class="py-1 text-slate-500">NIK</td>
+                        <td class="py-1 font-mono font-bold text-slate-800" id="lap-nik"></td>
+                      </tr>
+                      <tr>
+                        <td class="py-1 text-slate-500">Nomor HP</td>
+                        <td class="py-1 font-mono font-bold text-slate-800" id="lap-hp"></td>
+                      </tr>
+                      <tr>
+                        <td class="py-1 text-slate-500">NPWPD</td>
+                        <td class="py-1 font-mono font-bold text-slate-800" id="lap-npwpd"></td>
                       </tr>
                       <tr>
                         <td class="py-1 text-slate-500 align-top">Alamat WP</td>
@@ -2446,8 +2454,9 @@
 
         document.getElementById('lap-status-reg').innerHTML = r.statusRegistrasi === "SUDAH_TERDAFTAR" ? '<span class="text-blue-600 font-bold">TERDAFTAR</span>' : '<span class="text-amber-600 font-bold">BARU</span>';
         document.getElementById('lap-nama-wp').innerText = r.namaWP || "-";
-        document.getElementById('lap-label-id').innerText = r.statusRegistrasi === "SUDAH_TERDAFTAR" ? "NPWPD" : "NIK";
-        document.getElementById('lap-npwpd-nik').innerText = r.statusRegistrasi === "SUDAH_TERDAFTAR" ? (r.npwpd || "-") : (r.nik || "-");
+        document.getElementById('lap-nik').innerText = r.nik || "-";
+        document.getElementById('lap-hp').innerText = r.nomorHP || "-";
+        document.getElementById('lap-npwpd').innerText = r.npwpd && r.npwpd !== "-" ? r.npwpd : "-";
         document.getElementById('lap-alamat-wp').innerText = r.alamatWP || "-";
         document.getElementById('lap-nama-usaha').innerText = r.namaUsaha || "-";
         document.getElementById('lap-judul').innerText = r.judulReklame || "-";
