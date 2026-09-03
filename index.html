@@ -1419,19 +1419,24 @@
       function checkAuth() {
         toggleAuthUI();
         const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-        if (isLoggedIn === 'true' && !isAppInitialized) {
-            // Beri sedikit jeda agar DOM benar-benar siap setelah pergantian display
-            setTimeout(() => {
-                initMap();
-                initDashboardMap();
-                fetchRecordsFromGoogleSheet(); 
-                isAppInitialized = true;
+        if (isLoggedIn === 'true') {
+            if (!isAppInitialized) {
+                // Inisialisasi awal jika baru pertama kali login sejak browser dibuka
+                setTimeout(() => {
+                    initMap();
+                    initDashboardMap();
+                    fetchRecordsFromGoogleSheet(); 
+                    isAppInitialized = true;
+                }, 100);
+            } else {
+                // Jika login kembali (ganti akun) tanpa me-refresh browser:
+                // Langsung render ulang tabel agar tombol aksi (Hapus) seketika 
+                // menyesuaikan hak akses (aktif/nonaktif) dari akun yang baru masuk.
+                renderTable();
                 
-                const user = sessionStorage.getItem('loggedUser');
-                if(user && sessionStorage.getItem('userRole') !== 'petugas') {
-                    document.getElementById('namaPetugas').value = user;
-                }
-            }, 100);
+                // Ambil ulang data dari database di latar belakang
+                fetchRecordsFromGoogleSheet();
+            }
         }
       }
 
