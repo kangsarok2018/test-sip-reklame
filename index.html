@@ -435,7 +435,6 @@
                 </div>
               </div>
 
-              <!-- SPESIFIKASI REKLAME -->
               <div class="space-y-4 pt-2">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-indigo-900 border-b border-slate-200 pb-2 flex items-center gap-2"><i class="fa-solid fa-ruler-combined text-indigo-600"></i> Spesifikasi Reklame</h3>
 
@@ -1092,27 +1091,6 @@
         </div>
       </div>
 
-      <!-- Modal Riwayat/History per Objek -->
-      <div id="historyModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-2xl p-6 relative shadow-2xl max-h-[80vh] flex flex-col">
-          <button onclick="closeHistoryModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full w-8 h-8"><i class="fa-solid fa-xmark"></i></button>
-          <h3 class="font-bold text-lg mb-2 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Jejak Riwayat Objek</h3>
-          <p id="history-obj-title" class="text-xs text-slate-500 font-bold mb-4 uppercase"></p>
-          <div class="overflow-y-auto flex-1 border rounded-lg custom-scrollbar">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 border-b sticky top-0">
-                <tr>
-                  <th class="px-3 py-2">Waktu</th>
-                  <th class="px-3 py-2">Tindakan</th>
-                  <th class="px-3 py-2">Petugas / Aktor</th>
-                </tr>
-              </thead>
-              <tbody id="history-tbody" class="divide-y divide-slate-100"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
       <!-- MOBILE BOTTOM NAVIGATION -->
       <div class="sm:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 shadow-[0_-4px_10px_-4px_rgba(0,0,0,0.1)] z-50 px-2 py-2 print:hidden flex justify-around">
         <button onclick="switchTab('dashboard')" id="mob-btn-dashboard" class="flex flex-col items-center justify-center w-1/5 p-1 text-indigo-600 rounded-lg">
@@ -1146,10 +1124,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
     <script>
-      const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app"; 
+      const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
       
       // Data Pengguna (Sekarang diambil dari Firebase)
       let systemUsers = {};
@@ -1265,9 +1242,10 @@
       async function fetchUsers() {
         try {
           const response = await fetch(`${FIREBASE_URL}/users.json`);
-          const data = response.ok ? await response.json() : null;
+          const data = await response.json();
           systemUsers = data || {};
           
+          // Ensure at least one admin exists if database is empty
           if (Object.keys(systemUsers).length === 0) {
             const defaultAdmin = {
                 username: 'admin',
@@ -1276,22 +1254,22 @@
                 name: 'Administrator',
                 permissions: { table: true, laporan: true }
             };
-            fetch(`${FIREBASE_URL}/users/admin.json`, {
+            await fetch(`${FIREBASE_URL}/users/admin.json`, {
                 method: 'PUT',
                 body: JSON.stringify(defaultAdmin)
-            }).catch(e => console.log("Firebase sedang read-only/error"));
+            });
             systemUsers['admin'] = defaultAdmin;
           }
           renderUsersTable();
         } catch (error) {
           console.error("Gagal mengambil data user:", error);
-          showToast("Koneksi Firebase offline, masuk dengan Admin Darurat.", "info");
+          showToast("Gagal memuat pengaturan akun.", "error");
         }
       }
 
       function handleLogin(e) {
           e.preventDefault();
-          const user = document.getElementById('login-username').value.trim().toLowerCase();
+          const user = document.getElementById('login-username').value;
           const pass = document.getElementById('login-password').value;
           const btn = document.getElementById('btn-login');
 
@@ -1302,13 +1280,11 @@
               let foundUser = null;
               let foundKey = null;
 
-              if (systemUsers && typeof systemUsers === 'object' && !systemUsers.error) {
-                  for (const key in systemUsers) {
-                      if (systemUsers[key].username && systemUsers[key].username.toLowerCase() === user) {
-                          foundUser = systemUsers[key];
-                          foundKey = key;
-                          break;
-                      }
+              for (const key in systemUsers) {
+                  if (systemUsers[key].username === user) {
+                      foundUser = systemUsers[key];
+                      foundKey = key;
+                      break;
                   }
               }
 
@@ -1321,25 +1297,12 @@
                   sessionStorage.setItem('userPermissions', JSON.stringify(foundUser.permissions || { table: false, laporan: false }));
 
                   showToast(`Selamat datang, ${foundUser.name}!`, "success");
-                  document.getElementById('login-username').value = ""; 
-                  document.getElementById('login-password').value = ""; 
-                  checkAuth();
-              } 
-              else if (user === 'admin' && pass === 'admin123') {
-                  sessionStorage.setItem('isLoggedIn', 'true');
-                  sessionStorage.setItem('loggedUser', 'Administrator');
-                  sessionStorage.setItem('userRole', 'admin');
-                  sessionStorage.setItem('userId', 'admin');
-                  sessionStorage.setItem('userPermissions', JSON.stringify({ table: true, laporan: true }));
-
-                  showToast(`Berhasil masuk (Mode Offline/Admin)!`, "success");
-                  document.getElementById('login-username').value = ""; 
-                  document.getElementById('login-password').value = ""; 
+                  document.getElementById('login-username').value = ""; // Bersihkan field username
+                  document.getElementById('login-password').value = ""; // Reset security
                   checkAuth();
               } else {
                   showToast("Username atau Password salah!", "error");
               }
-              
               btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem`;
               btn.disabled = false;
           }, 800);
@@ -2593,59 +2556,6 @@
           if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
           doc.save(fileName + ".pdf");
           showToast("PDF berhasil diunduh!", "success");
-      }
-
-      function exportTableToExcel() {
-          if (typeof XLSX === 'undefined') { 
-              showToast("Library Excel gagal dimuat. Periksa koneksi internet!", "error"); 
-              return; 
-          }
-          showToast("Memproses file Excel...", "info");
-          
-          const q = document.getElementById('filterSearch').value.toLowerCase();
-          const reg = document.getElementById('filterRegistrasi').value;
-          const fPajak = document.getElementById('filterJenisPajak').value;
-
-          const filtered = records.filter(r => {
-              const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
-              const matchReg = !reg || r.statusRegistrasi === reg;
-              const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
-              return matchQ && matchReg && matchPajak;
-          });
-
-          if (filtered.length === 0) {
-              showToast("Tidak ada data untuk diekspor!", "error");
-              return;
-          }
-
-          const dataExcel = filtered.map((r, i) => ({
-              "No": i + 1, 
-              "Status Registrasi": r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'TERDAFTAR' : 'BARU',
-              "Status Keaktifan": r.statusKeaktifan || 'AKTIF',
-              "Wajib Pajak": r.namaWP, 
-              "NPWPD": r.npwpd !== "-" ? r.npwpd : "", 
-              "NIK": r.nik !== "-" ? r.nik : "", 
-              "Alamat WP": r.alamatWP,
-              "Nama Usaha": r.namaUsaha, 
-              "Teks Reklame": r.judulReklame, 
-              "Alamat Usaha": r.alamatUsaha,
-              "Kewajiban Pajak": r.jenisPajak || "Pajak Reklame", 
-              "Jenis Reklame": r.jenisReklame, 
-              "Panjang (m)": r.panjang, 
-              "Lebar (m)": r.lebar, 
-              "Sisi": r.sisi,
-              "Kelas Jalan": r.kelasJalan,
-              "Latitude": r.lat,
-              "Longitude": r.lng,
-              "Petugas Pendata": r.namaPetugas, 
-              "Tanggal Input": r.tanggalInput
-          }));
-
-          const ws = XLSX.utils.json_to_sheet(dataExcel);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Data Reklame");
-          XLSX.writeFile(wb, `Data_SIP_Reklame_${new Date().toISOString().slice(0,10)}.xlsx`);
-          showToast("File Excel berhasil diunduh!", "success");
       }
 
       function updateNJOPR() {
