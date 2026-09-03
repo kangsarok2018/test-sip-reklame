@@ -245,7 +245,6 @@
             </div>
           </div>
 
-          <!-- FITUR 1: CHART.JS ANALYTICS & VISUAL GRAPHICS -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
               <div class="flex justify-between items-center">
@@ -652,8 +651,8 @@
               <button onclick="exportTableToPDF()" class="hidden sm:flex px-3 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 text-xs font-semibold items-center gap-1.5 shadow-sm transition">
                 <i class="fa-solid fa-file-pdf"></i> Export PDF
               </button>
-              <button onclick="downloadTemplate()" class="hidden sm:flex px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 text-xs font-semibold items-center gap-1.5">
-                <i class="fa-solid fa-file-excel"></i> Template Excel
+              <button onclick="exportToExcel()" class="hidden sm:flex px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 text-xs font-semibold items-center gap-1.5 transition">
+                <i class="fa-solid fa-file-excel"></i> Export Excel
               </button>
             </div>
           </div>
@@ -979,6 +978,33 @@
         </div>
       </div>
 
+      <!-- MODAL RIWAYAT OBJEK (HISTORY) -->
+      <div id="objectHistoryModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
+          <button onclick="closeObjectHistory()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+          
+          <h3 class="font-bold text-slate-800 text-lg mb-1"><i class="fa-solid fa-clock-rotate-left text-sky-600 mr-2"></i> Riwayat Tindakan Objek</h3>
+          <p id="historyModalSubtitle" class="text-xs text-slate-500 mb-4 border-b pb-3">Objek: -</p>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase font-bold tracking-wider">
+                <tr>
+                  <th class="px-4 py-3">Waktu</th>
+                  <th class="px-4 py-3">Petugas</th>
+                  <th class="px-4 py-3">Tindakan</th>
+                  <th class="px-4 py-3">Detail</th>
+                </tr>
+              </thead>
+              <tbody id="object-history-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- MODAL STRUK BUKTI PENDATAAN -->
       <div id="strukModal" class="fixed inset-0 bg-slate-900/85 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-lg p-6 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
@@ -1120,17 +1146,17 @@
       </div>
     </div> <!-- PENUTUP WADAH UTAMA APLIKASI -->
 
-    <!-- Leaflet JS & jsPDF Libraries -->
+    <!-- External Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- SheetJS for Export to Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
       const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
       
-      // Data Pengguna (Sekarang diambil dari Firebase)
       let systemUsers = {};
-
       let map, marker, dashMap, dashMarkersGroup;
       let records = [];
       let currentPage = 1;
@@ -1200,7 +1226,18 @@
         "[18A] REKLAME HURUF DIBAWAH 50 CM": 50000
       };
       
-      // 1. Fungsi Mencegah Layar Login Berkedip (Flash Screen)
+      // AUTO UPPERCASE KECUALI FIELD LOGIN & USERNAME
+      document.addEventListener('input', function(e) {
+        if (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'search')) {
+            if (e.target.id === 'userUsername' || e.target.id === 'login-username' || e.target.id === 'login-password') return;
+            const start = e.target.selectionStart;
+            const end = e.target.selectionEnd;
+            e.target.value = e.target.value.toUpperCase();
+            e.target.setSelectionRange(start, end);
+        }
+      });
+
+      // CORE AUTHENTICATION LOGIC
       function toggleAuthUI() {
           const isLoggedIn = sessionStorage.getItem('isLoggedIn');
           const loginSection = document.getElementById('login-section');
@@ -1220,22 +1257,15 @@
           }
       }
 
-      // 2. Langsung panggil eksekusi UI segera setelah script dimuat
-      toggleAuthUI();
-      
       window.onload = function() {
         fetchUsers();
+        toggleAuthUI();
         const isLoggedIn = sessionStorage.getItem('isLoggedIn');
         if (isLoggedIn === 'true' && !isAppInitialized) {
             initMap();
             initDashboardMap();
             fetchRecordsFromGoogleSheet(); 
             isAppInitialized = true;
-            
-            const user = sessionStorage.getItem('loggedUser');
-            if(user && sessionStorage.getItem('userRole') !== 'petugas') {
-                document.getElementById('namaPetugas').value = user;
-            }
         }
       };
 
@@ -1245,7 +1275,6 @@
           const data = await response.json();
           systemUsers = data || {};
           
-          // Ensure at least one admin exists if database is empty
           if (Object.keys(systemUsers).length === 0) {
             const defaultAdmin = {
                 username: 'admin',
@@ -1254,16 +1283,12 @@
                 name: 'Administrator',
                 permissions: { table: true, laporan: true }
             };
-            await fetch(`${FIREBASE_URL}/users/admin.json`, {
-                method: 'PUT',
-                body: JSON.stringify(defaultAdmin)
-            });
+            await fetch(`${FIREBASE_URL}/users/admin.json`, { method: 'PUT', body: JSON.stringify(defaultAdmin) });
             systemUsers['admin'] = defaultAdmin;
           }
           renderUsersTable();
         } catch (error) {
           console.error("Gagal mengambil data user:", error);
-          showToast("Gagal memuat pengaturan akun.", "error");
         }
       }
 
@@ -1293,12 +1318,11 @@
                   sessionStorage.setItem('loggedUser', foundUser.name);
                   sessionStorage.setItem('userRole', foundUser.role);
                   sessionStorage.setItem('userId', foundKey);
-                  // Simpan permissions ke sessionStorage
                   sessionStorage.setItem('userPermissions', JSON.stringify(foundUser.permissions || { table: false, laporan: false }));
 
                   showToast(`Selamat datang, ${foundUser.name}!`, "success");
-                  document.getElementById('login-username').value = ""; // Bersihkan field username
-                  document.getElementById('login-password').value = ""; // Reset security
+                  document.getElementById('login-username').value = ""; 
+                  document.getElementById('login-password').value = ""; 
                   checkAuth();
               } else {
                   showToast("Username atau Password salah!", "error");
@@ -1319,10 +1343,8 @@
               document.getElementById('login-username').value = "";
               document.getElementById('login-password').value = "";
 
-              // Reset form & paksa tab kembali ke default (dashboard) di belakang layar
               resetForm();
               switchTab('dashboard');
-
               showToast("Anda telah keluar dari sesi.", "info");
               checkAuth();
           }
@@ -1338,17 +1360,14 @@
               document.getElementById('display-role').innerText = role === 'admin' ? "Administrator" : "Petugas Lapangan";
           }
           
+          const inputPetugas = document.getElementById('namaPetugas');
+
           if (role === 'petugas') {
-              // Histori selalu hidden untuk petugas
               if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.add('hidden');
               if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.add('hidden');
-              
-              // Users tab selalu hidden untuk petugas
               if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.add('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('flex');
               if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('hidden');
 
-              // Atur akses Table berdasarkan permissions
               if(permissions.table) {
                   if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
                   if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
@@ -1357,7 +1376,6 @@
                   if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.add('hidden');
               }
 
-              // Atur akses Laporan berdasarkan permissions
               if(permissions.laporan) {
                   if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
                   if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
@@ -1366,53 +1384,39 @@
                   if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.add('hidden');
               }
               
-              // Kunci input nama petugas
-              const inputPetugas = document.getElementById('namaPetugas');
               if(inputPetugas) {
                   inputPetugas.value = name;
                   inputPetugas.setAttribute('readonly', 'true');
                   inputPetugas.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
               }
 
-              // Sembunyikan filter dropdown petugas di tab laporan
               const rekapDropdown = document.getElementById('ctrl-lap-rekap');
               if(rekapDropdown) {
                   const selectElement = rekapDropdown.querySelector('select');
                   if(selectElement) selectElement.parentElement.classList.add('hidden');
               }
               
-              switchTab('dashboard'); // Default tab untuk petugas diubah dari 'form' ke 'dashboard'
           } else {
-              // Tampilkan semua untuk admin
               if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.remove('hidden');
               if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.remove('hidden');
-              
               if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
               if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
-              
               if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
               if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
-
-              // Tampilkan tab Users untuk Admin
               if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.remove('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('flex');
+              if(document.getElementById('mob-btn-users')) { document.getElementById('mob-btn-users').classList.remove('hidden'); document.getElementById('mob-btn-users').classList.add('flex'); }
               
-              const inputPetugas = document.getElementById('namaPetugas');
               if(inputPetugas) {
                   inputPetugas.removeAttribute('readonly');
                   inputPetugas.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
-                  inputPetugas.value = name; // Set ke nama admin yang sedang login
+                  inputPetugas.value = name; 
               }
 
-              // Tampilkan filter dropdown petugas di tab laporan
               const rekapDropdown = document.getElementById('ctrl-lap-rekap');
               if(rekapDropdown) {
                   const selectElement = rekapDropdown.querySelector('select');
                   if(selectElement) selectElement.parentElement.classList.remove('hidden');
               }
-              
-              switchTab('dashboard'); // Default tab untuk admin
           }
       }
 
@@ -1421,7 +1425,6 @@
         const isLoggedIn = sessionStorage.getItem('isLoggedIn');
         if (isLoggedIn === 'true') {
             if (!isAppInitialized) {
-                // Inisialisasi awal jika baru pertama kali login sejak browser dibuka
                 setTimeout(() => {
                     initMap();
                     initDashboardMap();
@@ -1429,25 +1432,18 @@
                     isAppInitialized = true;
                 }, 100);
             } else {
-                // Jika login kembali (ganti akun) tanpa me-refresh browser:
-                // Langsung render ulang tabel agar tombol aksi (Hapus) seketika 
-                // menyesuaikan hak akses (aktif/nonaktif) dari akun yang baru masuk.
-                renderTable();
-                
-                // Ambil ulang data dari database di latar belakang
+                renderTable(); 
                 fetchRecordsFromGoogleSheet();
             }
         }
       }
 
       window.switchTab = function(tab) {
-        // 1. Sembunyikan semua konten tab
         ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan', 'view-users'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
 
-        // 2. Reset tampilan tombol navigasi (Desktop)
         ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan', 'tab-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -1456,7 +1452,6 @@
             }
         });
 
-        // 3. Reset tampilan tombol navigasi (Mobile)
         ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan', 'mob-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -1465,25 +1460,21 @@
             }
         });
 
-        // 4. Tampilkan view konten target
         const activeView = document.getElementById(`view-${tab}`);
         if (activeView) activeView.classList.remove('hidden');
 
-        // 5. Aktifkan style tombol navigasi (Desktop) target
         const activeTabBtn = document.getElementById(`tab-btn-${tab}`);
         if (activeTabBtn) {
             activeTabBtn.classList.remove('text-indigo-200', 'hover:text-white');
             activeTabBtn.classList.add('text-white', 'bg-indigo-600', 'shadow');
         }
 
-        // 6. Aktifkan style tombol navigasi (Mobile) target
         const mobBtn = document.getElementById(`mob-btn-${tab}`);
         if (mobBtn) {
             mobBtn.classList.remove('text-slate-400');
             mobBtn.classList.add('text-indigo-600');
         }
 
-        // Action spesifik untuk setiap tab
         if (tab === 'dashboard') {
             setTimeout(() => { 
                 if (dashMap) dashMap.invalidateSize(); 
@@ -1493,7 +1484,7 @@
         if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
         if (tab === 'audit') fetchAuditLogs();
         if (tab === 'laporan') resetLaporanSearch();
-        if (tab === 'users') fetchUsers(); // Refresh data users saat tab dibuka
+        if (tab === 'users') fetchUsers(); 
       };
 
       function fetchRecordsFromGoogleSheet(isManualTrigger = false) {
@@ -1509,14 +1500,9 @@
                 item.id = key;
 
                 let cleanJenis = String(item.jenisReklame || "").trim();
-                if (JENIS_REKLAME_MAP[cleanJenis]) {
-                  item.jenisReklame = JENIS_REKLAME_MAP[cleanJenis];
-                }
-
+                if (JENIS_REKLAME_MAP[cleanJenis]) item.jenisReklame = JENIS_REKLAME_MAP[cleanJenis];
                 let cleanKelas = String(item.kelasJalan || "").trim();
-                if (KELAS_JALAN_MAP[cleanKelas]) {
-                  item.kelasJalan = KELAS_JALAN_MAP[cleanKelas];
-                }
+                if (KELAS_JALAN_MAP[cleanKelas]) item.kelasJalan = KELAS_JALAN_MAP[cleanKelas];
 
                 records.push(item);
               }
@@ -1534,13 +1520,14 @@
           });
       }
 
-      function logAuditTrail(action, petugas, namaUsaha, detail) {
+      function logAuditTrail(action, petugas, namaUsaha, detail, recordId = null) {
         const auditId = "LOG-" + new Date().getTime();
         const auditData = {
           id: auditId,
+          recordId: recordId,
           timestamp: new Date().toLocaleString('id-ID'),
           petugas: petugas || "Sistem",
-          action: action, // "TAMBAH", "UPDATE", "HAPUS"
+          action: action, 
           namaUsaha: namaUsaha || "-",
           detail: detail || "-"
         };
@@ -1561,9 +1548,7 @@
           .then(data => {
             let logs = [];
             if (data) {
-              for (let k in data) {
-                logs.push(data[k]);
-              }
+              for (let k in data) logs.push(data[k]);
             }
             logs.sort((a, b) => (b.id < a.id) ? -1 : 1);
 
@@ -1600,7 +1585,6 @@
 
       function saveRecord(event) {
         event.preventDefault();
-
         const btn = document.getElementById('submitBtn');
         const originalText = document.getElementById('btnText').innerText;
         btn.disabled = true;
@@ -1662,7 +1646,8 @@
               isNew ? "TAMBAH" : "UPDATE",
               namaPetugasVal,
               namaUsahaVal,
-              isNew ? `Menambahkan objek reklame baru (${data.jenisReklame})` : `Memperbarui spesifikasi / data reklame`
+              isNew ? `Menambahkan objek baru (${data.jenisReklame})` : `Memperbarui data reklame`,
+              recordId
             );
 
             showToast("Data berhasil disimpan ke Firebase!", "success");
@@ -1683,24 +1668,18 @@
 
         if(confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) {
             showToast("Menghapus data dari server...", "info");
-            
-            fetch(`${FIREBASE_URL}/reklame/${id}.json`, {
-                method: 'DELETE'
-            })
+            fetch(`${FIREBASE_URL}/reklame/${id}.json`, { method: 'DELETE' })
             .then(response => {
                 if(!response.ok) throw new Error("Gagal menghapus data");
-                
                 const currentUser = sessionStorage.getItem('loggedUser') || "Admin";
-                logAuditTrail("HAPUS", currentUser, namaUsahaTarget, "Menghapus data objek pajak dari database");
+                logAuditTrail("HAPUS", currentUser, namaUsahaTarget, "Menghapus data objek pajak dari database", id);
 
                 records = records.filter(r => r.id !== id);
                 updateDashboard();
                 renderTable();
                 showToast("Data berhasil dihapus permanen!", "success");
             })
-            .catch(err => {
-                showToast("Error koneksi sistem: " + err.message, "error");
-            });
+            .catch(err => { showToast("Error koneksi sistem: " + err.message, "error"); });
         }
       }
 
@@ -1813,15 +1792,12 @@
         const petugas = document.getElementById('namaPetugas').value;
         document.getElementById('reklameForm').reset();
         document.getElementById('namaPetugas').value = petugas;
-
         document.getElementById('recordId').value = "";
         document.getElementById('statusRegistrasi').value = "BELUM_TERDAFTAR";
         document.getElementById('form-header-title').innerText = "Formulir Pendataan";
         document.getElementById('btnText').innerText = "Simpan Data Baru";
 
-        document.querySelectorAll('input[name="chkPajak"]').forEach(cb => {
-            cb.checked = cb.value === "Pajak Reklame";
-        });
+        document.querySelectorAll('input[name="chkPajak"]').forEach(cb => { cb.checked = cb.value === "Pajak Reklame"; });
         
         document.getElementById('njopr').value = 0;
         document.getElementById('ketinggian').value = "";
@@ -1877,32 +1853,20 @@
         document.getElementById('dash-total-objek').innerText = records.length;
 
         const terdaftarObjek = records.filter(r => r.statusRegistrasi === "SUDAH_TERDAFTAR").length;
-        
-        // Menghitung jumlah Wajib Pajak (NPWPD) yang unik
         const uniqueNPWPDs = new Set();
         records.forEach(r => {
             if (r.statusRegistrasi === "SUDAH_TERDAFTAR") {
                 const npwpd = (r.npwpd || "").trim();
-                if (npwpd && npwpd !== "-") {
-                    uniqueNPWPDs.add(npwpd);
-                } else {
-                    // Jika status terdaftar tapi NPWPD kosong/strip, tetap dihitung per entitas ID-nya
-                    uniqueNPWPDs.add(r.id); 
-                }
+                if (npwpd && npwpd !== "-") uniqueNPWPDs.add(npwpd);
+                else uniqueNPWPDs.add(r.id); 
             }
         });
-        const terdaftarUnik = uniqueNPWPDs.size;
 
-        const belum = records.filter(r => r.statusRegistrasi === "BELUM_TERDAFTAR").length;
-        const aktif = records.filter(r => r.statusKeaktifan === "AKTIF").length;
-        const tutup = records.filter(r => r.statusKeaktifan === "TIDAK_AKTIF").length;
+        document.getElementById('dash-total-terdaftar').innerText = uniqueNPWPDs.size;
+        document.getElementById('dash-total-belum').innerText = records.filter(r => r.statusRegistrasi === "BELUM_TERDAFTAR").length;
+        document.getElementById('dash-total-aktif').innerText = records.filter(r => r.statusKeaktifan === "AKTIF").length;
+        document.getElementById('dash-total-tutup').innerText = records.filter(r => r.statusKeaktifan === "TIDAK_AKTIF").length;
 
-        document.getElementById('dash-total-terdaftar').innerText = terdaftarUnik;
-        document.getElementById('dash-total-belum').innerText = belum;
-        document.getElementById('dash-total-aktif').innerText = aktif;
-        document.getElementById('dash-total-tutup').innerText = tutup;
-
-        // Progress bar tetap menggunakan perbandingan jumlah *objek*
         const pct = records.length > 0 ? (terdaftarObjek / records.length) * 100 : 0;
         document.getElementById('bar-terdaftar').style.width = pct + "%";
 
@@ -1968,33 +1932,23 @@
             else if (jenis.includes("BALEHO")) jenis = "Baleho";
             else if (jenis.includes("KAIN") || jenis.includes("SPANDUK")) jenis = "Spanduk / Kain";
             else jenis = "Lainnya";
-
             kategoriCount[jenis] = (kategoriCount[jenis] || 0) + 1;
         });
 
-        const katLabels = Object.keys(kategoriCount);
-        const katData = Object.values(kategoriCount);
-
         const ctxKat = document.getElementById('chartKategoriReklame').getContext('2d');
         if (chartKategoriInstance) chartKategoriInstance.destroy();
-
         chartKategoriInstance = new Chart(ctxKat, {
             type: 'bar',
             data: {
-                labels: katLabels.length ? katLabels : ['Belum Ada Data'],
+                labels: Object.keys(kategoriCount).length ? Object.keys(kategoriCount) : ['Belum Ada Data'],
                 datasets: [{
                     label: 'Jumlah Objek',
-                    data: katData.length ? katData : [0],
+                    data: Object.values(kategoriCount).length ? Object.values(kategoriCount) : [0],
                     backgroundColor: ['#4f46e5', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#6366f1'],
                     borderRadius: 8
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
 
         const kelasCount = {};
@@ -2007,26 +1961,18 @@
             kelasCount[k] = (kelasCount[k] || 0) + 1;
         });
 
-        const kelasLabels = Object.keys(kelasCount);
-        const kelasData = Object.values(kelasCount);
-
         const ctxKelas = document.getElementById('chartKelasJalan').getContext('2d');
         if (chartKelasInstance) chartKelasInstance.destroy();
-
         chartKelasInstance = new Chart(ctxKelas, {
             type: 'doughnut',
             data: {
-                labels: kelasLabels.length ? kelasLabels : ['Belum Ada Data'],
+                labels: Object.keys(kelasCount).length ? Object.keys(kelasCount) : ['Belum Ada Data'],
                 datasets: [{
-                    data: kelasData.length ? kelasData : [1],
+                    data: Object.values(kelasCount).length ? Object.values(kelasCount) : [1],
                     backgroundColor: ['#312e81', '#4f46e5', '#06b6d4', '#10b981', '#f59e0b']
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
         });
       }
 
@@ -2067,6 +2013,8 @@
             return;
         }
 
+        const role = sessionStorage.getItem('userRole');
+
         paginatedItems.forEach((r, idx) => {
             const realIndex = startIndex + idx + 1;
             const dim = `${r.panjang}m x ${r.lebar}m (${r.sisi} Sisi)`;
@@ -2080,9 +2028,6 @@
                 tagHtml += `<span class="px-1.5 py-0.5 ${color} border rounded text-[8px] font-extrabold inline-block mr-1 mt-1.5 uppercase tracking-wide">${p}</span>`;
             });
 
-            const role = sessionStorage.getItem('userRole');
-            
-            // Tombol Delete: Aktif untuk admin, Disabled untuk petugas
             const btnDelete = role === 'admin' 
                 ? `<button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>` 
                 : `<button disabled class="p-2 bg-slate-100 text-slate-300 rounded-lg cursor-not-allowed opacity-50" title="Tidak ada akses hapus"><i class="fa-solid fa-trash text-xs"></i></button>`;
@@ -2091,11 +2036,16 @@
                 ? `<button onclick="viewLaporan('${r.id}')" class="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg" title="Cetak"><i class="fa-solid fa-print text-xs"></i></button>` 
                 : '';
 
+            const btnHistory = role === 'admin'
+                ? `<button onclick="openObjectHistory('${r.id}', '${r.namaUsaha.replace(/'/g, "\\'")}')" class="p-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg" title="Riwayat Objek"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button>`
+                : '';
+
             const btnActions = `
                 <button onclick="addAnotherReklame('${r.id}')" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg" title="Tambah Reklame"><i class="fa-solid fa-plus text-xs"></i></button>
                 <button onclick="editRecord('${r.id}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" title="Edit"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
                 ${btnDelete}
                 ${btnLaporan}
+                ${btnHistory}
                 <button onclick="openStruk('${r.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg" title="Struk"><i class="fa-solid fa-receipt text-xs"></i></button>
             `;
 
@@ -2150,76 +2100,147 @@
         });
       }
 
-      function downloadTemplate() {
-        const csvHeader = "ID Record,Status Registrasi,Status Keaktifan,Nama WP,NPWPD,NIK,Alamat WP,Nama Usaha,Judul Reklame,Alamat Usaha,Jenis Reklame,Panjang,Lebar,Sisi,Kelas Jalan,Latitude,Longitude,Foto,Tanggal Input,Nama Petugas,Keterangan\n";
-        const blob = new Blob([csvHeader], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", "Template_SIP_Reklame.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      function exportToExcel() {
+          const q = document.getElementById("filterSearch").value.toLowerCase();
+          const reg = document.getElementById("filterRegistrasi").value;
+          const fPajak = document.getElementById("filterJenisPajak").value;
+
+          const filtered = records.filter((r) => {
+            const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
+            const matchReg = !reg || r.statusRegistrasi === reg;
+            const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
+            return matchQ && matchReg && matchPajak;
+          });
+
+          if (filtered.length === 0) {
+              showToast("Tidak ada data untuk di-export!", "error");
+              return;
+          }
+
+          showToast("Menyiapkan file Excel...", "info");
+
+          const exportData = filtered.map((r, index) => ({
+              "No": index + 1,
+              "ID Record": r.id,
+              "Status Registrasi": r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'Terdaftar' : 'Baru',
+              "Status Keaktifan": r.statusKeaktifan,
+              "Kewajiban Pajak": r.jenisPajak,
+              "Nama Wajib Pajak": r.namaWP,
+              "NPWPD": r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? r.npwpd : "-",
+              "NIK": r.statusRegistrasi !== 'SUDAH_TERDAFTAR' ? r.nik : "-",
+              "Alamat WP": r.alamatWP,
+              "Nama Usaha / Merek": r.namaUsaha,
+              "Alamat Usaha": r.alamatUsaha,
+              "Teks / Judul Reklame": r.judulReklame,
+              "Jenis Reklame": r.jenisReklame,
+              "Kelas Jalan": r.kelasJalan,
+              "Panjang (m)": r.panjang,
+              "Lebar (m)": r.lebar,
+              "Sisi": r.sisi,
+              "Ketinggian (%)": r.ketinggian,
+              "Lama Pasang (LP)": r.lamaPemasangan,
+              "Dasar NJOPR": r.njopr,
+              "Latitude": r.lat,
+              "Longitude": r.lng,
+              "Tanggal Input": r.tanggalInput,
+              "Petugas Pendata": r.namaPetugas
+          }));
+
+          const worksheet = XLSX.utils.json_to_sheet(exportData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Data_Pajak_Reklame");
+
+          let fileName = "Data_Export_SIP_Reklame";
+          if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
+          XLSX.writeFile(workbook, fileName + ".xlsx");
+          
+          showToast("Berhasil mengekspor data ke Excel!", "success");
       }
 
-      function openPhotoModal(src) {
-        document.getElementById('modalImage').src = src;
-        document.getElementById('photoModal').classList.remove('hidden');
-        document.getElementById('photoModal').classList.add('flex');
-      }
-      function closePhotoModal() {
-        document.getElementById('photoModal').classList.add('hidden');
-        document.getElementById('photoModal').classList.remove('flex');
-      }
+      function exportTableToPDF() {
+          const q = document.getElementById("filterSearch").value.toLowerCase();
+          const reg = document.getElementById("filterRegistrasi").value;
+          const fPajak = document.getElementById("filterJenisPajak").value;
 
-      function showToast(msg, type = "success") {
-        const toast = document.getElementById('toast');
-        const content = document.getElementById('toast-content');
-        const bgClass = type === 'success' ? 'border-emerald-200 text-emerald-800' : (type === 'error' ? 'border-rose-200 text-rose-800' : 'border-indigo-200 text-indigo-800');
-        const icon = type === 'success' ? 'fa-circle-check text-emerald-600' : (type === 'error' ? 'fa-circle-xmark text-rose-600' : 'fa-circle-info text-indigo-600');
+          const filtered = records.filter((r) => {
+            const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
+            const matchReg = !reg || r.statusRegistrasi === reg;
+            const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
+            return matchQ && matchReg && matchPajak;
+          });
 
-        content.className = `px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-sm font-semibold bg-white ${bgClass}`;
-        content.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${msg}</span>`;
+          if (filtered.length === 0) {
+              showToast("Tidak ada data untuk di-export!", "error");
+              return;
+          }
 
-        toast.classList.remove('translate-x-full', 'opacity-0');
-        setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); }, 3000);
-      }
+          const mergedMap = {};
+          filtered.forEach(r => {
+              let cleanNpwpd = r.npwpd ? String(r.npwpd).trim() : "-";
+              const key = (cleanNpwpd !== "" && cleanNpwpd !== "-") ? cleanNpwpd : String(r.namaUsaha).trim().toUpperCase();
 
-      function handlePhotoUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+              if (!mergedMap[key]) {
+                  mergedMap[key] = {
+                      namaWP: r.namaWP, npwpd: r.npwpd, nik: r.nik, namaUsaha: r.namaUsaha,
+                      alamatUsaha: r.alamatUsaha, statusRegistrasi: r.statusRegistrasi,
+                      pajakList: r.jenisPajak ? r.jenisPajak.split(",").map(p => p.trim()) : ["Pajak Reklame"]
+                  };
+              } else {
+                  if (r.jenisPajak) {
+                      r.jenisPajak.split(",").forEach(p => {
+                          const cleanP = p.trim();
+                          if (!mergedMap[key].pajakList.includes(cleanP)) mergedMap[key].pajakList.push(cleanP);
+                      });
+                  }
+              }
+          });
 
-        if (!file.type.match(/image.*/)) {
-            showToast("Pilih file gambar yang valid!", "error");
-            return;
-        }
+          const finalDataToPrint = Object.values(mergedMap);
+          showToast("Menyiapkan dokumen PDF...", "info");
 
-        showToast("Mengompres foto...", "info");
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF('landscape'); 
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const MAX = 800;
-                let w = img.width;
-                let h = img.height;
+          let title = "LAPORAN REKAPITULASI OBJEK PAJAK DAERAH";
+          if (fPajak) title = "LAPORAN REKAPITULASI " + fPajak.toUpperCase();
 
-                if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-                else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          doc.setFontSize(14);
+          doc.setFont("helvetica", "bold");
+          doc.text(title, 14, 15);
+          
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "normal");
+          doc.text(`Total Wajib Pajak : ${finalDataToPrint.length} Objek | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-                canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
+          const tableColumn = ["No", "Nama Wajib Pajak", "Nama Usaha", "Gabungan Kewajiban Pajak", "Alamat Usaha", "Status"];
+          const tableRows = [];
 
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-                document.getElementById('photoImg').src = dataUrl;
-                document.getElementById('photoImg').classList.remove('hidden');
-                document.getElementById('photoPreview').classList.add('hidden');
-                showToast("Foto siap disimpan ke database!", "success");
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+          finalDataToPrint.forEach((item, index) => {
+              const rowData = [
+                  index + 1,
+                  item.namaWP + "\n" + (item.statusRegistrasi === "SUDAH_TERDAFTAR" ? "NPWPD: "+item.npwpd : "NIK: "+item.nik),
+                  item.namaUsaha,
+                  item.pajakList.join(", "),
+                  item.alamatUsaha,
+                  item.statusRegistrasi === "SUDAH_TERDAFTAR" ? "Terdaftar" : "Baru"
+              ];
+              tableRows.push(rowData);
+          });
+
+          doc.autoTable({
+              head: [tableColumn],
+              body: tableRows,
+              startY: 28,
+              theme: 'grid',
+              styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+              headStyles: { fillColor: [49, 46, 129], textColor: [255,255,255] },
+              alternateRowStyles: { fillColor: [248, 250, 252] }
+          });
+
+          let fileName = "Rekap_Laporan_Pajak";
+          if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
+          doc.save(fileName + ".pdf");
+          showToast("PDF berhasil diunduh!", "success");
       }
 
       function resetLaporanSearch() {
@@ -2305,7 +2326,6 @@
                 officers.forEach(name => { select.innerHTML += `<option value="${name}">${name}</option>`; });
                 generateLaporanRekap('');
             } else {
-                // Untuk petugas, langsung generate berdasarkan namanya saja
                 generateLaporanRekap(loggedUser);
             }
         }
@@ -2314,7 +2334,6 @@
       function generateLaporan(id) {
         const kertas = document.getElementById('kertasLaporan');
         if (!id) { kertas.classList.add('hidden'); return; }
-
         const r = records.find(item => item.id === id);
         if (!r) return;
 
@@ -2395,60 +2414,15 @@
         tbody.innerHTML = html;
       }
 
-      function openStruk(id) {
-        const r = records.find(item => item.id === id);
-        if (!r) return;
-
-        document.getElementById('str-tgl').innerText = r.tanggalInput;
-        document.getElementById('str-id').innerText = r.id;
-        document.getElementById('str-petugas').innerText = (r.namaPetugas && r.namaPetugas !== "-") ? r.namaPetugas : "Admin";
-        document.getElementById('str-ttd-petugas').innerText = (r.namaPetugas && r.namaPetugas !== "-") ? r.namaPetugas : "( ...................... )";
-        document.getElementById('str-reg').innerText = r.statusRegistrasi === "SUDAH_TERDAFTAR" ? "TERDAFTAR" : "BARU";
-        document.getElementById('str-nama-usaha').innerText = r.namaUsaha;
-        document.getElementById('str-alamat-usaha').innerText = r.alamatUsaha;
-        document.getElementById('str-wp').innerText = r.namaWP;
-        document.getElementById('str-npwpd').innerText = (r.statusRegistrasi === "SUDAH_TERDAFTAR") ? r.npwpd : r.nik;
-        document.getElementById('str-naskah').innerText = r.judulReklame;
-        document.getElementById('str-jenis').innerText = r.jenisReklame;
-        document.getElementById('str-ukuran').innerText = `${r.panjang}x${r.lebar}`;
-        document.getElementById('str-sisi').innerText = r.sisi;
-        document.getElementById('str-tindakan').innerText = r.keteranganTindakan || (r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'UPDATE DATA' : 'DATA BARU');
-        document.getElementById('str-status').innerText = r.statusKeaktifan === "AKTIF" ? "AKTIF" : "TUTUP";
-
-        const strImg = document.getElementById('str-foto');
-        const strNoImg = document.getElementById('str-no-foto');
-        if (r.photo && r.photo !== "Tanpa Foto") {
-            strImg.src = r.photo;
-            strImg.classList.remove('hidden');
-            strNoImg.classList.add('hidden');
-        } else {
-            strImg.classList.add('hidden');
-            strNoImg.classList.remove('hidden');
-        }
-
-        const modal = document.getElementById('strukModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      }
-
-      function closeStruk() {
-        const modal = document.getElementById('strukModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-      }
-
       function cetakArea(elementId) {
         const sourceEl = document.getElementById(elementId);
         const container = document.getElementById('print-container');
-
         if (!sourceEl || !container) {
             showToast("Elemen cetak tidak ditemukan!", "error");
             return;
         }
-
         container.innerHTML = sourceEl.outerHTML;
         document.body.classList.add('print-mode');
-
         setTimeout(() => {
             window.print();
             setTimeout(() => {
@@ -2458,115 +2432,11 @@
         }, 150);
       }
 
-      document.addEventListener('input', function(e) {
-        if (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'search')) {
-            // Abaikan uppercase otomatis pada login section dan form pembuatan username petugas
-            if (e.target.id === 'login-username' || e.target.id === 'login-password' || e.target.id === 'userUsername') return;
-            
-            const start = e.target.selectionStart;
-            const end = e.target.selectionEnd;
-            e.target.value = e.target.value.toUpperCase();
-            e.target.setSelectionRange(start, end);
-        }
-      });
-
-      function exportTableToPDF() {
-          const q = document.getElementById("filterSearch").value.toLowerCase();
-          const reg = document.getElementById("filterRegistrasi").value;
-          const fPajak = document.getElementById("filterJenisPajak").value;
-
-          const filtered = records.filter((r) => {
-            const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
-            const matchReg = !reg || r.statusRegistrasi === reg;
-            const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
-            return matchQ && matchReg && matchPajak;
-          });
-
-          if (filtered.length === 0) {
-              showToast("Tidak ada data untuk di-export!", "error");
-              return;
-          }
-
-          const mergedMap = {};
-          filtered.forEach(r => {
-              let cleanNpwpd = r.npwpd ? String(r.npwpd).trim() : "-";
-              const key = (cleanNpwpd !== "" && cleanNpwpd !== "-") ? cleanNpwpd : String(r.namaUsaha).trim().toUpperCase();
-
-              if (!mergedMap[key]) {
-                  mergedMap[key] = {
-                      namaWP: r.namaWP, npwpd: r.npwpd, nik: r.nik, namaUsaha: r.namaUsaha,
-                      alamatUsaha: r.alamatUsaha, statusRegistrasi: r.statusRegistrasi,
-                      pajakList: r.jenisPajak ? r.jenisPajak.split(",").map(p => p.trim()) : ["Pajak Reklame"]
-                  };
-              } else {
-                  if (r.jenisPajak) {
-                      r.jenisPajak.split(",").forEach(p => {
-                          const cleanP = p.trim();
-                          if (!mergedMap[key].pajakList.includes(cleanP)) {
-                              mergedMap[key].pajakList.push(cleanP);
-                          }
-                      });
-                  }
-              }
-          });
-
-          const finalDataToPrint = Object.values(mergedMap);
-          showToast("Menyiapkan dokumen PDF...", "info");
-
-          const { jsPDF } = window.jspdf;
-          const doc = new jsPDF('landscape'); 
-
-          let title = "LAPORAN REKAPITULASI OBJEK PAJAK DAERAH";
-          if (fPajak) title = "LAPORAN REKAPITULASI " + fPajak.toUpperCase();
-
-          doc.setFontSize(14);
-          doc.setFont("helvetica", "bold");
-          doc.text(title, 14, 15);
-          
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.text(`Total Wajib Pajak : ${finalDataToPrint.length} Objek | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
-
-          const tableColumn = ["No", "Nama Wajib Pajak", "Nama Usaha", "Gabungan Kewajiban Pajak", "Alamat Usaha", "Status"];
-          const tableRows = [];
-
-          finalDataToPrint.forEach((item, index) => {
-              const rowData = [
-                  index + 1,
-                  item.namaWP + "\n" + (item.statusRegistrasi === "SUDAH_TERDAFTAR" ? "NPWPD: "+item.npwpd : "NIK: "+item.nik),
-                  item.namaUsaha,
-                  item.pajakList.join(", "),
-                  item.alamatUsaha,
-                  item.statusRegistrasi === "SUDAH_TERDAFTAR" ? "Terdaftar" : "Baru"
-              ];
-              tableRows.push(rowData);
-          });
-
-          doc.autoTable({
-              head: [tableColumn],
-              body: tableRows,
-              startY: 28,
-              theme: 'grid',
-              styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-              headStyles: { fillColor: [49, 46, 129], textColor: [255,255,255] },
-              alternateRowStyles: { fillColor: [248, 250, 252] }
-          });
-
-          let fileName = "Rekap_Laporan_Pajak";
-          if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
-          doc.save(fileName + ".pdf");
-          showToast("PDF berhasil diunduh!", "success");
-      }
-
       function updateNJOPR() {
           const selectJenis = document.getElementById('jenisReklame').value;
           const inputNjopr = document.getElementById('njopr');
-          
-          if (selectJenis && TARIF_NJOPR[selectJenis] !== undefined) {
-              inputNjopr.value = TARIF_NJOPR[selectJenis];
-          } else {
-              inputNjopr.value = 0; 
-          }
+          if (selectJenis && TARIF_NJOPR[selectJenis] !== undefined) inputNjopr.value = TARIF_NJOPR[selectJenis];
+          else inputNjopr.value = 0; 
           hitungKalkulatorPajak();
       }
 
@@ -2589,28 +2459,49 @@
 
           let kj = 2.5;
           const valUpper = kelasJalanVal.toUpperCase();
-          if (valUpper.includes("NEGARA") || valUpper.includes("3,5") || valUpper.includes("3.5")) {
-              kj = 3.5;
-          } else if (valUpper.includes("PROVINSI") || valUpper.includes(" 3)")) {
-              kj = 3.0;
-          } else if (valUpper.includes("KOTA") || valUpper.includes("2,5") || valUpper.includes("2.5")) {
-              kj = 2.5;
-          } else if (valUpper.includes("LINGKUNGAN") || valUpper.includes(" 2)")) {
-              kj = 2.0;
-          }
+          if (valUpper.includes("NEGARA") || valUpper.includes("3,5") || valUpper.includes("3.5")) kj = 3.5;
+          else if (valUpper.includes("PROVINSI") || valUpper.includes(" 3)")) kj = 3.0;
+          else if (valUpper.includes("KOTA") || valUpper.includes("2,5") || valUpper.includes("2.5")) kj = 2.5;
+          else if (valUpper.includes("LINGKUNGAN") || valUpper.includes(" 2)")) kj = 2.0;
 
           const luas = panjang * lebar;
-          const persentaseKt = kt / 100;
-
-          const komponenKt = njopr + (njopr * persentaseKt);
-          const nsr = luas * sisi * (komponenKt * kj * lp);
-          
-          const tarifPajak = 0.25;
-          const totalPajak = nsr * tarifPajak;
+          const nsr = luas * sisi * ((njopr + (njopr * (kt / 100))) * kj * lp);
+          const totalPajak = nsr * 0.25;
 
           document.getElementById('calc-luas').innerText = luas.toFixed(2) + " m²";
           document.getElementById('calc-nsr').innerText = "Rp " + Math.round(nsr).toLocaleString('id-ID');
           document.getElementById('calc-total').innerText = "Rp " + Math.round(totalPajak).toLocaleString('id-ID');
+      }
+
+      function handlePhotoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (!file.type.match(/image.*/)) {
+            showToast("Pilih file gambar yang valid!", "error");
+            return;
+        }
+        showToast("Mengompres foto...", "info");
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX = 800;
+                let w = img.width; let h = img.height;
+                if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                document.getElementById('photoImg').src = dataUrl;
+                document.getElementById('photoImg').classList.remove('hidden');
+                document.getElementById('photoPreview').classList.add('hidden');
+                showToast("Foto siap disimpan ke database!", "success");
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
       }
 
       function selectWPFromDatabase(wpData) {
@@ -2628,14 +2519,11 @@
         document.getElementById('lebar').value = wpData.lebar || "";
         document.getElementById('sisi').value = wpData.sisi || 1;
         document.getElementById('kelasJalan').value = wpData.kelasJalan || "";
-        
         document.getElementById('ketinggian').value = wpData.ketinggian || "";
         document.getElementById('lamaPemasangan').value = wpData.lamaPemasangan || 1;
 
         const savedPajakList = wpData.jenisPajak ? wpData.jenisPajak.split(',').map(p => p.trim()) : ["Pajak Reklame"];
-        document.querySelectorAll('input[name="chkPajak"]').forEach(cb => {
-            cb.checked = savedPajakList.includes(cb.value);
-        });
+        document.querySelectorAll('input[name="chkPajak"]').forEach(cb => { cb.checked = savedPajakList.includes(cb.value); });
 
         if (wpData.statusRegistrasi === "SUDAH_TERDAFTAR") {
             document.getElementById('field-npwpd').classList.remove('hidden');
@@ -2680,7 +2568,125 @@
         hitungKalkulatorPajak();
         showToast(`Formulir siap untuk mengubah data ${wpData.namaUsaha}`, "success");
       }
-      
+
+      function openStruk(id) {
+        const r = records.find(item => item.id === id);
+        if (!r) return;
+        document.getElementById('str-tgl').innerText = r.tanggalInput;
+        document.getElementById('str-id').innerText = r.id;
+        document.getElementById('str-petugas').innerText = (r.namaPetugas && r.namaPetugas !== "-") ? r.namaPetugas : "Admin";
+        document.getElementById('str-ttd-petugas').innerText = (r.namaPetugas && r.namaPetugas !== "-") ? r.namaPetugas : "( ...................... )";
+        document.getElementById('str-reg').innerText = r.statusRegistrasi === "SUDAH_TERDAFTAR" ? "TERDAFTAR" : "BARU";
+        document.getElementById('str-nama-usaha').innerText = r.namaUsaha;
+        document.getElementById('str-alamat-usaha').innerText = r.alamatUsaha;
+        document.getElementById('str-wp').innerText = r.namaWP;
+        document.getElementById('str-npwpd').innerText = (r.statusRegistrasi === "SUDAH_TERDAFTAR") ? r.npwpd : r.nik;
+        document.getElementById('str-naskah').innerText = r.judulReklame;
+        document.getElementById('str-jenis').innerText = r.jenisReklame;
+        document.getElementById('str-ukuran').innerText = `${r.panjang}x${r.lebar}`;
+        document.getElementById('str-sisi').innerText = r.sisi;
+        document.getElementById('str-tindakan').innerText = r.keteranganTindakan || (r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'UPDATE DATA' : 'DATA BARU');
+        document.getElementById('str-status').innerText = r.statusKeaktifan === "AKTIF" ? "AKTIF" : "TUTUP";
+
+        const strImg = document.getElementById('str-foto');
+        const strNoImg = document.getElementById('str-no-foto');
+        if (r.photo && r.photo !== "Tanpa Foto") {
+            strImg.src = r.photo; strImg.classList.remove('hidden'); strNoImg.classList.add('hidden');
+        } else {
+            strImg.classList.add('hidden'); strNoImg.classList.remove('hidden');
+        }
+
+        const modal = document.getElementById('strukModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeStruk() {
+        document.getElementById('strukModal').classList.add('hidden');
+        document.getElementById('strukModal').classList.remove('flex');
+      }
+
+      function openPhotoModal(src) {
+        document.getElementById('modalImage').src = src;
+        document.getElementById('photoModal').classList.remove('hidden');
+        document.getElementById('photoModal').classList.add('flex');
+      }
+
+      function closePhotoModal() {
+        document.getElementById('photoModal').classList.add('hidden');
+        document.getElementById('photoModal').classList.remove('flex');
+      }
+
+      function openObjectHistory(recordId, namaUsaha) {
+        document.getElementById('historyModalSubtitle').innerText = "Objek: " + namaUsaha;
+        const tbody = document.getElementById('object-history-body');
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">Mencari riwayat... <i class="fa-solid fa-spinner fa-spin ml-2"></i></td></tr>`;
+        
+        document.getElementById('objectHistoryModal').classList.remove('hidden');
+        document.getElementById('objectHistoryModal').classList.add('flex');
+
+        fetch(`${FIREBASE_URL}/audit_logs.json`)
+          .then(res => res.json())
+          .then(data => {
+            let logs = [];
+            if (data) {
+              for (let k in data) {
+                const log = data[k];
+                if (log.recordId === recordId || (!log.recordId && log.namaUsaha === namaUsaha)) {
+                    logs.push(log);
+                }
+              }
+            }
+            logs.sort((a, b) => (b.id < a.id) ? -1 : 1);
+
+            if (logs.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 font-medium">Belum ada histori tersimpan untuk objek ini.</td></tr>`;
+              return;
+            }
+
+            let html = '';
+            logs.forEach(l => {
+              let badgeColor = l.action === 'TAMBAH' ? 'bg-emerald-100 text-emerald-800' : (l.action === 'UPDATE' ? 'bg-indigo-100 text-indigo-800' : 'bg-rose-100 text-rose-800');
+              let icon = l.action === 'TAMBAH' ? 'fa-plus-circle' : (l.action === 'UPDATE' ? 'fa-pen-to-square' : 'fa-trash');
+
+              html += `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                  <td class="px-4 py-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">${l.timestamp}</td>
+                  <td class="px-4 py-3 font-bold text-slate-800 text-[11px] uppercase">${l.petugas}</td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="px-2 py-0.5 ${badgeColor} rounded text-[9px] font-extrabold inline-flex items-center gap-1 uppercase">
+                      <i class="fa-solid ${icon}"></i> ${l.action}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-slate-600 text-[11px] leading-tight">${l.detail}</td>
+                </tr>
+              `;
+            });
+            tbody.innerHTML = html;
+          })
+          .catch(err => {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-rose-500">Gagal memuat histori: ${err.message}</td></tr>`;
+          });
+      }
+
+      function closeObjectHistory() {
+        document.getElementById('objectHistoryModal').classList.add('hidden');
+        document.getElementById('objectHistoryModal').classList.remove('flex');
+      }
+
+      function showToast(msg, type = "success") {
+        const toast = document.getElementById('toast');
+        const content = document.getElementById('toast-content');
+        const bgClass = type === 'success' ? 'border-emerald-200 text-emerald-800' : (type === 'error' ? 'border-rose-200 text-rose-800' : 'border-indigo-200 text-indigo-800');
+        const icon = type === 'success' ? 'fa-circle-check text-emerald-600' : (type === 'error' ? 'fa-circle-xmark text-rose-600' : 'fa-circle-info text-indigo-600');
+
+        content.className = `px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-sm font-semibold bg-white ${bgClass}`;
+        content.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${msg}</span>`;
+
+        toast.classList.remove('translate-x-full', 'opacity-0');
+        setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); }, 3000);
+      }
+
       function renderUsersTable() {
           const tbody = document.getElementById('users-table-body');
           tbody.innerHTML = '';
@@ -2692,7 +2698,7 @@
 
           for (const key in systemUsers) {
               const u = systemUsers[key];
-              if(u.role === 'admin') continue; // Hide admin from table
+              if(u.role === 'admin') continue; 
 
               const permissions = u.permissions || {};
               let badges = `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-bold mr-1">Pendataan</span>`;
@@ -2722,11 +2728,8 @@
           document.getElementById('userId').value = "";
           document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>Tambah Akun Petugas`;
           document.getElementById('userPassword').setAttribute('required', 'true');
-          
-          // Reset Checkboxes
           document.getElementById('access-table').checked = false;
           document.getElementById('access-laporan').checked = false;
-
           document.getElementById('userModal').classList.remove('hidden');
           document.getElementById('userModal').classList.add('flex');
       }
@@ -2743,14 +2746,10 @@
           document.getElementById('userId').value = key;
           document.getElementById('userName').value = u.name;
           document.getElementById('userUsername').value = u.username;
-          
-          // Password not required for edit unless they want to change it
           document.getElementById('userPassword').removeAttribute('required');
           document.getElementById('userPassword').value = "";
-          
           document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i>Edit Akun Petugas`;
 
-          // Set permissions
           const p = u.permissions || {};
           document.getElementById('access-table').checked = p.table || false;
           document.getElementById('access-laporan').checked = p.laporan || false;
@@ -2770,7 +2769,7 @@
           
           const userData = {
               username: document.getElementById('userUsername').value,
-              role: 'petugas', // Force role to petugas from this UI
+              role: 'petugas', 
               name: document.getElementById('userName').value,
               permissions: {
                   table: document.getElementById('access-table').checked,
@@ -2778,12 +2777,8 @@
               }
           };
 
-          // If editing and password is provided, update it. If new, use provided.
-          if (passInput) {
-              userData.pass = passInput;
-          } else if (systemUsers[userId] && systemUsers[userId].pass) {
-              userData.pass = systemUsers[userId].pass; // Keep old password
-          }
+          if (passInput) userData.pass = passInput;
+          else if (systemUsers[userId] && systemUsers[userId].pass) userData.pass = systemUsers[userId].pass; 
 
           fetch(`${FIREBASE_URL}/users/${userId}.json`, {
               method: 'PUT',
@@ -2794,11 +2789,9 @@
               if(!response.ok) throw new Error("Gagal menyimpan data akun");
               showToast("Akun petugas berhasil disimpan!", "success");
               closeUserModal();
-              return fetchUsers(); // Refresh table
+              return fetchUsers(); 
           })
-          .catch(err => {
-              showToast("Error sistem: " + err.message, "error");
-          })
+          .catch(err => { showToast("Error sistem: " + err.message, "error"); })
           .finally(() => {
               btn.disabled = false;
               btn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
@@ -2808,17 +2801,13 @@
       function deleteUser(key, name) {
           if(confirm(`Apakah Anda yakin ingin menghapus akses login untuk petugas "${name}"?`)) {
               showToast("Menghapus akun...", "info");
-              fetch(`${FIREBASE_URL}/users/${key}.json`, {
-                  method: 'DELETE'
-              })
+              fetch(`${FIREBASE_URL}/users/${key}.json`, { method: 'DELETE' })
               .then(response => {
                   if(!response.ok) throw new Error("Gagal menghapus akun");
                   showToast("Akun berhasil dihapus!", "success");
-                  fetchUsers(); // Refresh table
+                  fetchUsers(); 
               })
-              .catch(err => {
-                  showToast("Error koneksi sistem: " + err.message, "error");
-              });
+              .catch(err => { showToast("Error koneksi sistem: " + err.message, "error"); });
           }
       }
     </script>
