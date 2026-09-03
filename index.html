@@ -100,14 +100,14 @@
               <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1.5">Username <span class="text-rose-500">*</span></label>
                   <div class="relative">
-                      <input type="text" id="login-username" required class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik username Anda" />
+                      <input type="text" id="login-username" required autocomplete="username" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik username Anda" />
                       <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400"></i>
                   </div>
               </div>
               <div>
                   <label class="block text-xs font-bold text-slate-700 mb-1.5">Password <span class="text-rose-500">*</span></label>
                   <div class="relative">
-                      <input type="password" id="login-password" required class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik password Anda" />
+                      <input type="password" id="login-password" required minlength="6" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik password Anda" />
                       <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400"></i>
                   </div>
               </div>
@@ -941,12 +941,12 @@
             
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Username Login <span class="text-rose-500">*</span></label>
-              <input type="text" id="userUsername" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Cth: budi123" />
+              <input type="text" id="userUsername" required minlength="3" maxlength="50" autocomplete="username" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Cth: budi123" />
             </div>
             
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Password <span class="text-rose-500">*</span></label>
-              <input type="password" id="userPassword" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Minimal 6 karakter" />
+              <input type="password" id="userPassword" required minlength="6" autocomplete="new-password" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none" placeholder="Minimal 6 karakter" />
               <p class="text-[10px] text-slate-500 mt-1">Isi jika membuat baru atau mengubah password.</p>
             </div>
 
@@ -1139,6 +1139,135 @@
       let chartKelasInstance = null;
       let isAppInitialized = false;
 
+
+      // ============================================================
+      // UTILITAS KEAMANAN & VALIDASI FRONTEND
+      // ============================================================
+      function escapeHTML(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function normalizeText(value) {
+        return String(value ?? '').trim();
+      }
+
+      function normalizeUsername(value) {
+        return normalizeText(value).toLowerCase();
+      }
+
+      function isAdmin() {
+        return sessionStorage.getItem('userRole') === 'admin';
+      }
+
+      function getPermissions() {
+        try {
+          return JSON.parse(sessionStorage.getItem('userPermissions') || '{}') || {};
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function canAccess(tab) {
+        const role = sessionStorage.getItem('userRole');
+        if (role === 'admin') return true;
+        const permissions = getPermissions();
+        if (tab === 'table') return !!permissions.table;
+        if (tab === 'laporan') return !!permissions.laporan;
+        if (tab === 'audit' || tab === 'users') return false;
+        return ['dashboard', 'form'].includes(tab);
+      }
+
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value ?? '';
+      }
+
+      function getRecordDate(record) {
+        return record?.tanggalInput || new Date().toLocaleString('id-ID');
+      }
+
+      function parseNumber(value, fallback = 0) {
+        const n = Number.parseFloat(value);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      async function sha256(text) {
+        const data = new TextEncoder().encode(String(text));
+        const hash = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      async function verifyPassword(input, stored) {
+        const value = String(input ?? '');
+        const saved = String(stored ?? '');
+        if (!saved) return { ok: false, legacy: false };
+        if (saved.startsWith('sha256$')) {
+          return { ok: saved === `sha256$${await sha256(value)}`, legacy: false };
+        }
+        // Kompatibilitas sementara untuk akun lama yang masih plaintext.
+        return { ok: saved === value, legacy: true };
+      }
+
+      async function hashPassword(password) {
+        return `sha256$${await sha256(password)}`;
+      }
+
+      function sanitizeCoordinate(value, min, max) {
+        const n = parseNumber(value, NaN);
+        return Number.isFinite(n) && n >= min && n <= max ? n.toFixed(6) : '';
+      }
+
+      function selectedTaxList() {
+        return Array.from(document.querySelectorAll('input[name="chkPajak"]:checked')).map(cb => cb.value.trim());
+      }
+
+      function hasTax(record, tax) {
+        if (!tax) return true;
+        return String(record?.jenisPajak || '')
+          .split(',')
+          .map(x => x.trim())
+          .filter(Boolean)
+          .includes(tax);
+      }
+
+      function getFilteredRecords() {
+        const searchEl = document.getElementById('filterSearch');
+        const regEl = document.getElementById('filterRegistrasi');
+        const pajakEl = document.getElementById('filterJenisPajak');
+        const q = normalizeText(searchEl?.value).toLowerCase();
+        const reg = regEl?.value || '';
+        const fPajak = pajakEl?.value || '';
+
+        return records.filter(r => {
+          const matchQ = !q || [r.namaWP, r.namaUsaha, r.judulReklame, r.npwpd, r.nik]
+            .some(v => String(v ?? '').toLowerCase().includes(q));
+          const matchReg = !reg || r.statusRegistrasi === reg;
+          return matchQ && matchReg && hasTax(r, fPajak);
+        });
+      }
+
+      function updateIdentityFields() {
+        const registered = document.getElementById('statusRegistrasi')?.value === 'SUDAH_TERDAFTAR';
+        const npwpdField = document.getElementById('field-npwpd');
+        const nikField = document.getElementById('field-nik');
+        const alamatField = document.getElementById('field-alamat-wp');
+        const npwpd = document.getElementById('npwpd');
+        const nik = document.getElementById('nik');
+        const alamat = document.getElementById('alamatWP');
+        if (!npwpdField || !nikField || !alamatField) return;
+        npwpdField.classList.toggle('hidden', !registered);
+        nikField.classList.toggle('hidden', registered);
+        alamatField.classList.toggle('hidden', registered);
+        if (npwpd) npwpd.required = registered;
+        if (nik) nik.required = !registered;
+        if (alamat) alamat.required = !registered;
+      }
+
       const JENIS_REKLAME_MAP = {
         '18A': '[18A] REKLAME HURUF DIBAWAH 50 CM',
         '3B': '[3B] REKLAME BALEHO NON PERMANEN NON KAIN',
@@ -1200,112 +1329,119 @@
         "[18A] REKLAME HURUF DIBAWAH 50 CM": 50000
       };
       
-      // 1. Fungsi Mencegah Layar Login Berkedip (Flash Screen)
+      // 1. Tampilkan UI berdasarkan sesi yang tersimpan.
       function toggleAuthUI() {
-          const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-          const loginSection = document.getElementById('login-section');
-          const mainApp = document.getElementById('main-app');
+        const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
+        const loginSection = document.getElementById('login-section');
+        const mainApp = document.getElementById('main-app');
+        if (!loginSection || !mainApp) return;
 
-          if (isLoggedIn === 'true') {
-              loginSection.classList.add('hidden');
-              loginSection.classList.remove('flex');
-              mainApp.classList.remove('hidden');
-              mainApp.classList.add('flex');
-              applyRolePermissions();
-          } else {
-              loginSection.classList.remove('hidden');
-              loginSection.classList.add('flex');
-              mainApp.classList.add('hidden');
-              mainApp.classList.remove('flex');
-          }
+        if (isLoggedIn && sessionStorage.getItem('userId')) {
+          loginSection.classList.add('hidden');
+          loginSection.classList.remove('flex');
+          mainApp.classList.remove('hidden');
+          mainApp.classList.add('flex');
+          applyRolePermissions();
+        } else {
+          loginSection.classList.remove('hidden');
+          loginSection.classList.add('flex');
+          mainApp.classList.add('hidden');
+          mainApp.classList.remove('flex');
+        }
       }
 
-      // 2. Langsung panggil eksekusi UI segera setelah script dimuat
       toggleAuthUI();
-      
-      window.onload = function() {
-        fetchUsers();
-        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-        if (isLoggedIn === 'true' && !isAppInitialized) {
-            initMap();
-            initDashboardMap();
-            fetchRecordsFromGoogleSheet(); 
-            isAppInitialized = true;
-            
-            const user = sessionStorage.getItem('loggedUser');
-            if(user && sessionStorage.getItem('userRole') !== 'petugas') {
-                document.getElementById('namaPetugas').value = user;
-            }
-        }
-      };
 
-      async function fetchUsers() {
+      window.addEventListener('load', async () => {
+        await fetchUsers(false);
+        if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('userId')) {
+          checkAuth();
+        }
+      });
+
+      async function fetchUsers(showError = true) {
         try {
-          const response = await fetch(`${FIREBASE_URL}/users.json`);
+          const response = await fetch(`${FIREBASE_URL}/users.json`, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const data = await response.json();
           systemUsers = data || {};
-          
-          // Ensure at least one admin exists if database is empty
-          if (Object.keys(systemUsers).length === 0) {
-            const defaultAdmin = {
-                username: 'admin',
-                pass: 'admin123',
-                role: 'admin',
-                name: 'Administrator',
-                permissions: { table: true, laporan: true }
-            };
-            await fetch(`${FIREBASE_URL}/users/admin.json`, {
-                method: 'PUT',
-                body: JSON.stringify(defaultAdmin)
-            });
-            systemUsers['admin'] = defaultAdmin;
-          }
           renderUsersTable();
+          return systemUsers;
         } catch (error) {
-          console.error("Gagal mengambil data user:", error);
-          showToast("Gagal memuat pengaturan akun.", "error");
+          console.error('Gagal mengambil data user:', error);
+          if (showError) showToast('Gagal memuat pengaturan akun.', 'error');
+          return systemUsers;
         }
       }
 
-      function handleLogin(e) {
-          e.preventDefault();
-          const user = document.getElementById('login-username').value;
-          const pass = document.getElementById('login-password').value;
-          const btn = document.getElementById('btn-login');
+      async function handleLogin(e) {
+        e.preventDefault();
+        const userInput = normalizeUsername(document.getElementById('login-username').value);
+        const pass = document.getElementById('login-password').value;
+        const btn = document.getElementById('btn-login');
+        if (!userInput || pass.length < 6) {
+          showToast('Username dan password wajib diisi. Password minimal 6 karakter.', 'error');
+          return;
+        }
 
-          btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memproses...`;
-          btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+        btn.disabled = true;
 
-          setTimeout(() => {
-              let foundUser = null;
-              let foundKey = null;
+        try {
+          if (!Object.keys(systemUsers).length) await fetchUsers(false);
+          let foundUser = null;
+          let foundKey = null;
+          for (const key of Object.keys(systemUsers)) {
+            const candidate = systemUsers[key];
+            if (normalizeUsername(candidate?.username) === userInput) {
+              foundUser = candidate;
+              foundKey = key;
+              break;
+            }
+          }
 
-              for (const key in systemUsers) {
-                  if (systemUsers[key].username === user) {
-                      foundUser = systemUsers[key];
-                      foundKey = key;
-                      break;
-                  }
-              }
+          if (!foundUser) throw new Error('INVALID_CREDENTIALS');
+          const verification = await verifyPassword(pass, foundUser.pass);
+          if (!verification.ok) throw new Error('INVALID_CREDENTIALS');
 
-              if (foundUser && foundUser.pass === pass) {
-                  sessionStorage.setItem('isLoggedIn', 'true');
-                  sessionStorage.setItem('loggedUser', foundUser.name);
-                  sessionStorage.setItem('userRole', foundUser.role);
-                  sessionStorage.setItem('userId', foundKey);
-                  // Simpan permissions ke sessionStorage
-                  sessionStorage.setItem('userPermissions', JSON.stringify(foundUser.permissions || { table: false, laporan: false }));
+          // Migrasi password plaintext lama ke hash SHA-256 saat login berhasil.
+          if (verification.legacy) {
+            try {
+              const migrated = { ...foundUser, pass: await hashPassword(pass) };
+              await putFirebase(`users/${foundKey}`, migrated);
+              systemUsers[foundKey] = migrated;
+              foundUser = migrated;
+            } catch (migrationError) {
+              console.warn('Migrasi password lama gagal:', migrationError);
+            }
+          }
 
-                  showToast(`Selamat datang, ${foundUser.name}!`, "success");
-                  document.getElementById('login-username').value = ""; // Bersihkan field username
-                  document.getElementById('login-password').value = ""; // Reset security
-                  checkAuth();
-              } else {
-                  showToast("Username atau Password salah!", "error");
-              }
-              btn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem`;
-              btn.disabled = false;
-          }, 800);
+          sessionStorage.setItem('isLoggedIn', 'true');
+          sessionStorage.setItem('loggedUser', foundUser.name || foundUser.username);
+          sessionStorage.setItem('userRole', foundUser.role || 'petugas');
+          sessionStorage.setItem('userId', foundKey);
+          sessionStorage.setItem('userPermissions', JSON.stringify(foundUser.permissions || { table: false, laporan: false }));
+          document.getElementById('login-username').value = '';
+          document.getElementById('login-password').value = '';
+          showToast(`Selamat datang, ${foundUser.name || foundUser.username}!`, 'success');
+          checkAuth();
+        } catch (error) {
+          if (error.message === 'INVALID_CREDENTIALS') showToast('Username atau Password salah!', 'error');
+          else showToast('Login gagal: ' + error.message, 'error');
+        } finally {
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem';
+          btn.disabled = false;
+        }
+      }
+
+      async function putFirebase(path, data, method = 'PUT') {
+        const response = await fetch(`${FIREBASE_URL}/${path}.json`, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: data === undefined ? undefined : JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
       }
 
       function handleLogout() {
@@ -1319,8 +1455,14 @@
               document.getElementById('login-username').value = "";
               document.getElementById('login-password').value = "";
 
-              // Reset form & paksa tab kembali ke default (dashboard) di belakang layar
+              // Bersihkan state lokal agar data akun sebelumnya tidak tertinggal.
               resetForm();
+              records = [];
+              currentPage = 1;
+              systemUsers = {};
+              if (dashMarkersGroup) dashMarkersGroup.clearLayers();
+              if (chartKategoriInstance) { chartKategoriInstance.destroy(); chartKategoriInstance = null; }
+              if (chartKelasInstance) { chartKelasInstance.destroy(); chartKelasInstance = null; }
               switchTab('dashboard');
 
               showToast("Anda telah keluar dari sesi.", "info");
@@ -1329,118 +1471,73 @@
       }
 
       function applyRolePermissions() {
-          const role = sessionStorage.getItem('userRole');
-          const name = sessionStorage.getItem('loggedUser');
-          const permissions = JSON.parse(sessionStorage.getItem('userPermissions') || '{}');
-          
-          if(document.getElementById('display-nama')) {
-              document.getElementById('display-nama').innerText = name || "Pengguna";
-              document.getElementById('display-role').innerText = role === 'admin' ? "Administrator" : "Petugas Lapangan";
-          }
-          
+        const role = sessionStorage.getItem('userRole') || 'petugas';
+        const name = sessionStorage.getItem('loggedUser') || 'Pengguna';
+        const permissions = getPermissions();
+        setText('display-nama', name);
+        setText('display-role', role === 'admin' ? 'Administrator' : 'Petugas Lapangan');
+
+        const visibility = {
+          'tab-btn-audit': role === 'admin',
+          'mob-btn-audit': role === 'admin',
+          'tab-btn-users': role === 'admin',
+          'mob-btn-users': role === 'admin',
+          'tab-btn-table': role === 'admin' || !!permissions.table,
+          'mob-btn-table': role === 'admin' || !!permissions.table,
+          'tab-btn-laporan': role === 'admin' || !!permissions.laporan,
+          'mob-btn-laporan': role === 'admin' || !!permissions.laporan
+        };
+        Object.entries(visibility).forEach(([id, visible]) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.classList.toggle('hidden', !visible);
+          if (id === 'mob-btn-users' && visible) el.classList.add('flex');
+          if (id === 'mob-btn-users' && !visible) el.classList.remove('flex');
+        });
+
+        const inputPetugas = document.getElementById('namaPetugas');
+        if (inputPetugas) {
           if (role === 'petugas') {
-              // Histori selalu hidden untuk petugas
-              if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.add('hidden');
-              if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.add('hidden');
-              
-              // Users tab selalu hidden untuk petugas
-              if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.add('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('flex');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('hidden');
-
-              // Atur akses Table berdasarkan permissions
-              if(permissions.table) {
-                  if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
-                  if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
-              } else {
-                  if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.add('hidden');
-                  if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.add('hidden');
-              }
-
-              // Atur akses Laporan berdasarkan permissions
-              if(permissions.laporan) {
-                  if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
-                  if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
-              } else {
-                  if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.add('hidden');
-                  if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.add('hidden');
-              }
-              
-              // Kunci input nama petugas
-              const inputPetugas = document.getElementById('namaPetugas');
-              if(inputPetugas) {
-                  inputPetugas.value = name;
-                  inputPetugas.setAttribute('readonly', 'true');
-                  inputPetugas.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
-              }
-
-              // Sembunyikan filter dropdown petugas di tab laporan
-              const rekapDropdown = document.getElementById('ctrl-lap-rekap');
-              if(rekapDropdown) {
-                  const selectElement = rekapDropdown.querySelector('select');
-                  if(selectElement) selectElement.parentElement.classList.add('hidden');
-              }
-              
-              switchTab('dashboard'); // Default tab untuk petugas diubah dari 'form' ke 'dashboard'
+            inputPetugas.value = name;
+            inputPetugas.readOnly = true;
+            inputPetugas.classList.add('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
           } else {
-              // Tampilkan semua untuk admin
-              if(document.getElementById('tab-btn-audit')) document.getElementById('tab-btn-audit').classList.remove('hidden');
-              if(document.getElementById('mob-btn-audit')) document.getElementById('mob-btn-audit').classList.remove('hidden');
-              
-              if(document.getElementById('tab-btn-table')) document.getElementById('tab-btn-table').classList.remove('hidden');
-              if(document.getElementById('mob-btn-table')) document.getElementById('mob-btn-table').classList.remove('hidden');
-              
-              if(document.getElementById('tab-btn-laporan')) document.getElementById('tab-btn-laporan').classList.remove('hidden');
-              if(document.getElementById('mob-btn-laporan')) document.getElementById('mob-btn-laporan').classList.remove('hidden');
-
-              // Tampilkan tab Users untuk Admin
-              if(document.getElementById('tab-btn-users')) document.getElementById('tab-btn-users').classList.remove('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.remove('hidden');
-              if(document.getElementById('mob-btn-users')) document.getElementById('mob-btn-users').classList.add('flex');
-              
-              const inputPetugas = document.getElementById('namaPetugas');
-              if(inputPetugas) {
-                  inputPetugas.removeAttribute('readonly');
-                  inputPetugas.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
-                  inputPetugas.value = name; // Set ke nama admin yang sedang login
-              }
-
-              // Tampilkan filter dropdown petugas di tab laporan
-              const rekapDropdown = document.getElementById('ctrl-lap-rekap');
-              if(rekapDropdown) {
-                  const selectElement = rekapDropdown.querySelector('select');
-                  if(selectElement) selectElement.parentElement.classList.remove('hidden');
-              }
-              
-              switchTab('dashboard'); // Default tab untuk admin
+            inputPetugas.readOnly = false;
+            inputPetugas.classList.remove('bg-slate-200', 'cursor-not-allowed', 'text-slate-500');
+            if (!inputPetugas.value) inputPetugas.value = name;
           }
+        }
+
+        const selectWrap = document.getElementById('ctrl-lap-rekap')?.querySelector('select')?.parentElement;
+        if (selectWrap) selectWrap.classList.toggle('hidden', role !== 'admin');
+        updateIdentityFields();
       }
 
       function checkAuth() {
         toggleAuthUI();
-        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-        if (isLoggedIn === 'true') {
-            if (!isAppInitialized) {
-                // Inisialisasi awal jika baru pertama kali login sejak browser dibuka
-                setTimeout(() => {
-                    initMap();
-                    initDashboardMap();
-                    fetchRecordsFromGoogleSheet(); 
-                    isAppInitialized = true;
-                }, 100);
-            } else {
-                // Jika login kembali (ganti akun) tanpa me-refresh browser:
-                // Langsung render ulang tabel agar tombol aksi (Hapus) seketika 
-                // menyesuaikan hak akses (aktif/nonaktif) dari akun yang baru masuk.
-                renderTable();
-                
-                // Ambil ulang data dari database di latar belakang
-                fetchRecordsFromGoogleSheet();
-            }
+        if (sessionStorage.getItem('isLoggedIn') !== 'true' || !sessionStorage.getItem('userId')) return;
+        applyRolePermissions();
+        if (!isAppInitialized) {
+          setTimeout(() => initializeMapsAndData(), 100);
+        } else {
+          renderTable();
+          fetchRecordsFromGoogleSheet();
         }
       }
 
+      function initializeMapsAndData() {
+        if (!isAppInitialized) {
+          initMap();
+          initDashboardMap();
+          isAppInitialized = true;
+        }
+        fetchRecordsFromGoogleSheet();
+        const user = sessionStorage.getItem('loggedUser');
+        if (user && sessionStorage.getItem('userRole') === 'admin') setText('namaPetugas', user);
+      }
+
       window.switchTab = function(tab) {
+        if (!canAccess(tab)) { showToast('Anda tidak memiliki hak akses ke menu ini.', 'error'); return; }
         // 1. Sembunyikan semua konten tab
         ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan', 'view-users'].forEach(id => {
             const el = document.getElementById(id);
@@ -1500,7 +1597,10 @@
         if (isManualTrigger) showToast("Mengambil data realtime dari Firebase...", "info");
 
         fetch(`${FIREBASE_URL}/reklame.json`)
-          .then(response => response.json())
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
           .then(data => {
             records = [];
             if (data) {
@@ -1521,7 +1621,7 @@
                 records.push(item);
               }
             }
-            records.sort((a, b) => (b.id < a.id) ? 1 : (b.id > a.id ? -1 : 0));
+            records.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
 
             if (isManualTrigger) showToast(`Berhasil memuat ${records.length} data!`, "success");
             updateDashboard(); 
@@ -1539,6 +1639,7 @@
         const auditData = {
           id: auditId,
           timestamp: new Date().toLocaleString('id-ID'),
+          createdAt: Date.now(),
           petugas: petugas || "Sistem",
           action: action, // "TAMBAH", "UPDATE", "HAPUS"
           namaUsaha: namaUsaha || "-",
@@ -1553,6 +1654,7 @@
       }
 
       function fetchAuditLogs() {
+        if (!isAdmin()) { showToast('Histori hanya dapat diakses admin.', 'error'); return; }
         const tbody = document.getElementById('audit-table-body');
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">Memuat histori audit...</td></tr>`;
 
@@ -1579,128 +1681,147 @@
 
               html += `
                 <tr class="hover:bg-slate-50 transition">
-                  <td class="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">${l.timestamp}</td>
-                  <td class="px-4 py-3 font-bold text-slate-800">${l.petugas}</td>
+                  <td class="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">${escapeHTML(l.timestamp)}</td>
+                  <td class="px-4 py-3 font-bold text-slate-800">${escapeHTML(l.petugas)}</td>
                   <td class="px-4 py-3 whitespace-nowrap">
                     <span class="px-2 py-0.5 ${badgeColor} border rounded text-[10px] font-extrabold inline-flex items-center gap-1 uppercase">
-                      <i class="fa-solid ${icon}"></i> ${l.action}
+                      <i class="fa-solid ${icon}"></i> ${escapeHTML(l.action)}
                     </span>
                   </td>
-                  <td class="px-4 py-3 font-bold text-indigo-950">${l.namaUsaha}</td>
-                  <td class="px-4 py-3 text-slate-600 text-xs">${l.detail}</td>
+                  <td class="px-4 py-3 font-bold text-indigo-950">${escapeHTML(l.namaUsaha)}</td>
+                  <td class="px-4 py-3 text-slate-600 text-xs">${escapeHTML(l.detail)}</td>
                 </tr>
               `;
             });
             tbody.innerHTML = html;
           })
           .catch(err => {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-500">Gagal memuat histori: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-rose-500">Gagal memuat histori: ${escapeHTML(err.message)}</td></tr>`;
           });
       }
 
-      function saveRecord(event) {
+      async function saveRecord(event) {
         event.preventDefault();
-
         const btn = document.getElementById('submitBtn');
         const originalText = document.getElementById('btnText').innerText;
-        btn.disabled = true;
-        document.getElementById('btnText').innerText = "Menyimpan...";
-
-        let photoData = document.getElementById('photoImg').src;
-        if (!photoData || photoData === window.location.href) photoData = "Tanpa Foto";
-
+        const recordIdInput = document.getElementById('recordId');
+        const isNew = !recordIdInput.value;
+        const recordId = isNew ? `REC-${Date.now()}` : recordIdInput.value;
+        const existing = records.find(r => r.id === recordId);
+        const role = sessionStorage.getItem('userRole');
+        const loggedUser = sessionStorage.getItem('loggedUser') || '';
+        const namaPetugasVal = normalizeText(document.getElementById('namaPetugas').value);
+        const namaUsahaVal = normalizeText(document.getElementById('namaUsaha').value);
+        const namaWPVal = normalizeText(document.getElementById('namaWP').value);
+        const jenisReklameVal = document.getElementById('jenisReklame').value;
+        const kelasJalanVal = document.getElementById('kelasJalan').value;
+        const panjang = parseNumber(document.getElementById('panjang').value);
+        const lebar = parseNumber(document.getElementById('lebar').value);
+        const sisi = parseInt(document.getElementById('sisi').value, 10);
+        const lamaPemasangan = parseNumber(document.getElementById('lamaPemasangan').value);
+        const ketinggian = parseNumber(document.getElementById('ketinggian').value);
+        const statusRegistrasi = document.getElementById('statusRegistrasi').value;
         const inputKeaktifan = document.querySelector('input[name="statusKeaktifan"]:checked');
-        const checkedPajak = Array.from(document.querySelectorAll('input[name="chkPajak"]:checked')).map(cb => cb.value).join(', ');
+        const checkedPajak = selectedTaxList();
 
-        const isNew = !document.getElementById('recordId').value;
-        const recordId = isNew ? "REC-" + new Date().getTime() : document.getElementById('recordId').value;
-        const namaPetugasVal = document.getElementById('namaPetugas').value;
-        const namaUsahaVal = document.getElementById('namaUsaha').value;
+        if (role === 'petugas' && namaPetugasVal !== loggedUser) {
+          showToast('Nama petugas tidak valid untuk sesi ini.', 'error');
+          return;
+        }
+        if (!namaPetugasVal || !namaWPVal || !namaUsahaVal || !jenisReklameVal || !kelasJalanVal) {
+          showToast('Lengkapi semua field wajib sebelum menyimpan.', 'error');
+          return;
+        }
+        if (!(panjang > 0) || !(lebar > 0) || !(sisi >= 1) || !(lamaPemasangan > 0)) {
+          showToast('Panjang, lebar, sisi, dan lama pemasangan harus bernilai lebih dari 0.', 'error');
+          return;
+        }
+        if (statusRegistrasi === 'SUDAH_TERDAFTAR' && !normalizeText(document.getElementById('npwpd').value)) {
+          showToast('NPWPD wajib diisi untuk data terdaftar.', 'error');
+          return;
+        }
+        if (statusRegistrasi !== 'SUDAH_TERDAFTAR' && normalizeText(document.getElementById('nik').value).length !== 16) {
+          showToast('NIK untuk data baru harus 16 digit.', 'error');
+          return;
+        }
+        if (!checkedPajak.length) {
+          showToast('Pilih minimal satu kewajiban pajak.', 'error');
+          return;
+        }
+
+        let photoData = document.getElementById('photoImg').src || '';
+        if (!photoData || photoData === window.location.href) photoData = existing?.photo || 'Tanpa Foto';
+        const lat = sanitizeCoordinate(document.getElementById('lat').value, -90, 90);
+        const lng = sanitizeCoordinate(document.getElementById('lng').value, -180, 180);
+        const now = Date.now();
 
         const data = {
-            id: recordId,
-            namaPetugas: namaPetugasVal,
-            statusRegistrasi: document.getElementById('statusRegistrasi').value,
-            statusKeaktifan: inputKeaktifan ? inputKeaktifan.value : 'AKTIF',
-            keteranganTindakan: isNew ? "DATA BARU" : "UPDATE DATA",
-            jenisPajak: checkedPajak || "Pajak Reklame",
-            namaWP: document.getElementById('namaWP').value,
-            npwpd: document.getElementById('npwpd').value || "-",
-            nik: document.getElementById('nik').value || "-",
-            alamatWP: document.getElementById('alamatWP').value || "-",
-            namaUsaha: namaUsahaVal,
-            judulReklame: document.getElementById('judulReklame').value,
-            alamatUsaha: document.getElementById('alamatUsaha').value,
-            jenisReklame: document.getElementById('jenisReklame').value,
-            panjang: document.getElementById('panjang').value,
-            lebar: document.getElementById('lebar').value,
-            sisi: document.getElementById('sisi').value,
-            kelasJalan: document.getElementById('kelasJalan').value,
-            njopr: document.getElementById('njopr').value,
-            ketinggian: document.getElementById('ketinggian').value,
-            lamaPemasangan: document.getElementById('lamaPemasangan').value,
-            lat: document.getElementById('lat').value,
-            lng: document.getElementById('lng').value,
-            photo: photoData,
-            tanggalInput: document.getElementById('str-tgl') && !isNew ? document.getElementById('str-tgl').innerText : new Date().toLocaleString('id-ID')
+          id: recordId,
+          createdAt: existing?.createdAt || now,
+          updatedAt: now,
+          namaPetugas: namaPetugasVal,
+          statusRegistrasi,
+          statusKeaktifan: inputKeaktifan ? inputKeaktifan.value : 'AKTIF',
+          keteranganTindakan: isNew ? 'DATA BARU' : 'UPDATE DATA',
+          jenisPajak: checkedPajak.join(', '),
+          namaWP: namaWPVal,
+          npwpd: normalizeText(document.getElementById('npwpd').value) || '-',
+          nik: normalizeText(document.getElementById('nik').value) || '-',
+          alamatWP: normalizeText(document.getElementById('alamatWP').value) || '-',
+          namaUsaha: namaUsahaVal,
+          judulReklame: normalizeText(document.getElementById('judulReklame').value),
+          alamatUsaha: normalizeText(document.getElementById('alamatUsaha').value),
+          jenisReklame: jenisReklameVal,
+          panjang: String(panjang),
+          lebar: String(lebar),
+          sisi: String(sisi),
+          kelasJalan: kelasJalanVal,
+          njopr: String(parseNumber(document.getElementById('njopr').value)),
+          ketinggian: String(ketinggian),
+          lamaPemasangan: String(lamaPemasangan),
+          lat,
+          lng,
+          photo: photoData,
+          tanggalInput: existing ? getRecordDate(existing) : new Date().toLocaleString('id-ID')
         };
 
-        fetch(`${FIREBASE_URL}/reklame/${recordId}.json`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error("Gagal menyimpan ke server");
-            return response.json();
-        })
-        .then(() => {
-            btn.disabled = false;
-            document.getElementById('btnText').innerText = originalText;
-
-            logAuditTrail(
-              isNew ? "TAMBAH" : "UPDATE",
-              namaPetugasVal,
-              namaUsahaVal,
-              isNew ? `Menambahkan objek reklame baru (${data.jenisReklame})` : `Memperbarui spesifikasi / data reklame`
-            );
-
-            showToast("Data berhasil disimpan ke Firebase!", "success");
-            resetForm(); 
-            fetchRecordsFromGoogleSheet(); 
-            switchTab('table');
-        })
-        .catch(err => {
-            btn.disabled = false;
-            document.getElementById('btnText').innerText = originalText;
-            showToast("Error sistem: " + err.message, "error");
-        });
+        btn.disabled = true;
+        document.getElementById('btnText').innerText = 'Menyimpan...';
+        try {
+          await putFirebase(`reklame/${recordId}`, data);
+          logAuditTrail(isNew ? 'TAMBAH' : 'UPDATE', namaPetugasVal, namaUsahaVal,
+            isNew ? `Menambahkan objek reklame baru (${data.jenisReklame})` : 'Memperbarui spesifikasi / data reklame');
+          showToast('Data berhasil disimpan ke Firebase!', 'success');
+          resetForm();
+          await fetchRecordsFromGoogleSheet();
+          switchTab('table');
+        } catch (err) {
+          showToast('Error sistem: ' + err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          document.getElementById('btnText').innerText = originalText;
+        }
       }
 
-      function deleteRecord(id) {
+      async function deleteRecord(id) {
+        if (!isAdmin()) {
+          showToast('Hanya admin yang dapat menghapus data.', 'error');
+          return;
+        }
         const target = records.find(r => r.id === id);
-        const namaUsahaTarget = target ? target.namaUsaha : "Objek";
-
-        if(confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) {
-            showToast("Menghapus data dari server...", "info");
-            
-            fetch(`${FIREBASE_URL}/reklame/${id}.json`, {
-                method: 'DELETE'
-            })
-            .then(response => {
-                if(!response.ok) throw new Error("Gagal menghapus data");
-                
-                const currentUser = sessionStorage.getItem('loggedUser') || "Admin";
-                logAuditTrail("HAPUS", currentUser, namaUsahaTarget, "Menghapus data objek pajak dari database");
-
-                records = records.filter(r => r.id !== id);
-                updateDashboard();
-                renderTable();
-                showToast("Data berhasil dihapus permanen!", "success");
-            })
-            .catch(err => {
-                showToast("Error koneksi sistem: " + err.message, "error");
-            });
+        if (!target) return;
+        const namaUsahaTarget = target.namaUsaha || 'Objek';
+        if (!confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) return;
+        try {
+          showToast('Menghapus data dari server...', 'info');
+          await putFirebase(`reklame/${id}`, undefined, 'DELETE');
+          logAuditTrail('HAPUS', sessionStorage.getItem('loggedUser') || 'Admin', namaUsahaTarget, 'Menghapus data objek pajak dari database');
+          records = records.filter(r => r.id !== id);
+          updateDashboard();
+          renderTable();
+          showToast('Data berhasil dihapus permanen!', 'success');
+        } catch (err) {
+          showToast('Error koneksi sistem: ' + err.message, 'error');
         }
       }
 
@@ -1710,6 +1831,7 @@
       }
 
       function initMap() {
+        if (map) return;
         const defaultPos = [-1.48210, 102.43120];
         map = L.map('map').setView(defaultPos, 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSMap' }).addTo(map);
@@ -1747,6 +1869,7 @@
       }
 
       function initDashboardMap() {
+        if (dashMap) return;
         dashMap = L.map('dashboard-map').setView([-1.48210, 102.43120], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSMap' }).addTo(dashMap);
         dashMarkersGroup = L.layerGroup().addTo(dashMap);
@@ -1774,7 +1897,7 @@
         newOpt.innerHTML = `
             <div>
                 <span class="text-[10px] text-amber-600 block mb-0.5"><i class="fa-solid fa-plus-circle"></i> Daftarkan Baru</span>
-                <span class="text-sm font-bold text-amber-900">${query}</span>
+                <span class="text-sm font-bold text-amber-900">${escapeHTML(query)}</span>
             </div>
             <span class="px-2 py-1 bg-amber-200 text-amber-900 rounded text-[9px] uppercase font-extrabold">Baru</span>
         `;
@@ -1786,8 +1909,8 @@
             item.onclick = () => selectWPFromDatabase(m);
             item.innerHTML = `
                 <div>
-                    <span class="text-sm font-bold text-indigo-950 block">${m.namaUsaha}</span>
-                    <span class="text-[10px] text-slate-500">WP: ${m.namaWP} | ${m.npwpd !== '-' ? m.npwpd : ''}</span>
+                    <span class="text-sm font-bold text-indigo-950 block">${escapeHTML(m.namaUsaha)}</span>
+                    <span class="text-[10px] text-slate-500">WP: ${escapeHTML(m.namaWP)} | ${m.npwpd !== '-' ? escapeHTML(m.npwpd) : ''}</span>
                 </div>
                 <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-[9px] uppercase font-bold text-center">Terdaftar</span>
             `;
@@ -1816,6 +1939,7 @@
 
         document.getElementById('recordId').value = "";
         document.getElementById('statusRegistrasi').value = "BELUM_TERDAFTAR";
+        document.getElementById('keteranganTindakan').value = "DATA BARU";
         document.getElementById('form-header-title').innerText = "Formulir Pendataan";
         document.getElementById('btnText').innerText = "Simpan Data Baru";
 
@@ -1838,6 +1962,9 @@
         document.getElementById('field-npwpd').classList.add('hidden');
         document.getElementById('field-nik').classList.remove('hidden');
         document.getElementById('field-alamat-wp').classList.remove('hidden');
+        document.getElementById('photoInput').value = '';
+        updateIdentityFields();
+        hitungKalkulatorPajak();
       }
 
       function editRecord(id) {
@@ -1859,7 +1986,12 @@
         document.getElementById('nik').value = r.nik !== "-" ? r.nik : "";
         document.getElementById('alamatWP').value = r.alamatWP !== "-" ? r.alamatWP : "";
         document.getElementById('namaUsaha').value = r.namaUsaha;
+        document.getElementById('judulReklame').value = '';
         document.getElementById('alamatUsaha').value = r.alamatUsaha;
+        document.getElementById('jenisReklame').value = '';
+        document.getElementById('kelasJalan').value = r.kelasJalan || '';
+        document.getElementById('ketinggian').value = r.ketinggian || '';
+        document.getElementById('lamaPemasangan').value = r.lamaPemasangan || 1;
 
         if (r.statusRegistrasi === "SUDAH_TERDAFTAR") {
             document.getElementById('field-npwpd').classList.remove('hidden');
@@ -1914,8 +2046,8 @@
                     const circle = L.circleMarker([r.lat, r.lng], { radius: 6, fillColor: color, color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.8 });
                     circle.bindPopup(`
                         <div class="space-y-1">
-                            <strong class="text-xs block text-slate-800">${r.namaUsaha}</strong>
-                            <span class="text-[10px] font-bold text-indigo-600 block">${r.jenisReklame}</span>
+                            <strong class="text-xs block text-slate-800">${escapeHTML(r.namaUsaha)}</strong>
+                            <span class="text-[10px] font-bold text-indigo-600 block">${escapeHTML(r.jenisReklame)}</span>
                         </div>
                     `);
                     dashMarkersGroup.addLayer(circle);
@@ -1933,8 +2065,8 @@
         Object.keys(kawasanMap).forEach(k => {
             kList.innerHTML += `
                 <div class="flex justify-between items-center text-xs">
-                    <span class="text-slate-600 font-medium truncate max-w-[150px] sm:max-w-[200px]" title="${k}">${k}</span>
-                    <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-bold rounded-md whitespace-nowrap">${kawasanMap[k]} Titik</span>
+                    <span class="text-slate-600 font-medium truncate max-w-[150px] sm:max-w-[200px]" title="${escapeHTML(k)}">${escapeHTML(k)}</span>
+                    <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-bold rounded-md whitespace-nowrap">${escapeHTML(kawasanMap[k])} Titik</span>
                 </div>
             `;
         });
@@ -1945,8 +2077,8 @@
             recent.innerHTML += `
                 <div class="p-2 bg-slate-50 rounded-lg flex justify-between items-center">
                     <div class="truncate mr-2">
-                        <p class="font-bold text-slate-800 text-[11px] truncate">${r.namaUsaha}</p>
-                        <p class="text-[9px] text-slate-400">${r.tanggalInput} - ${r.namaPetugas}</p>
+                        <p class="font-bold text-slate-800 text-[11px] truncate">${escapeHTML(r.namaUsaha)}</p>
+                        <p class="text-[9px] text-slate-400">${escapeHTML(r.tanggalInput)} - ${escapeHTML(r.namaPetugas)}</p>
                     </div>
                     <span class="px-1.5 py-0.5 ${r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'} text-[9px] font-bold rounded whitespace-nowrap">
                         ${r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'Terdaftar' : 'Baru'}
@@ -2033,121 +2165,90 @@
       function renderTable() {
         const tbody = document.getElementById('table-body');
         const cardBody = document.getElementById('card-body');
-        tbody.innerHTML = "";
-        cardBody.innerHTML = "";
+        if (!tbody || !cardBody) return;
+        tbody.innerHTML = '';
+        cardBody.innerHTML = '';
 
-        const q = document.getElementById('filterSearch').value.toLowerCase();
-        const reg = document.getElementById('filterRegistrasi').value;
-        const fPajak = document.getElementById('filterJenisPajak').value;
-
-        const filtered = records.filter(r => {
-            const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
-            const matchReg = !reg || r.statusRegistrasi === reg;
-            const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
-            return matchQ && matchReg && matchPajak;
-        });
-
+        const filtered = getFilteredRecords();
         const totalItems = filtered.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
+        currentPage = Math.min(Math.max(currentPage, 1), totalPages);
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
         const paginatedItems = filtered.slice(startIndex, endIndex);
 
-        document.getElementById('pagination-info').innerHTML = totalItems === 0 ? "<b>0</b> data" : `<b>${startIndex + 1}</b> - <b>${endIndex}</b> / <b>${totalItems}</b>`;
-        document.getElementById('page-indicator').innerText = `${currentPage} / ${totalPages}`;
-        document.getElementById('btn-prev-page').disabled = currentPage === 1;
-        document.getElementById('btn-next-page').disabled = currentPage === totalPages || totalItems === 0;
+        const info = document.getElementById('pagination-info');
+        if (info) info.innerHTML = totalItems === 0 ? '<b>0</b> data' : `<b>${startIndex + 1}</b> - <b>${endIndex}</b> / <b>${totalItems}</b>`;
+        setText('page-indicator', `${currentPage} / ${totalPages}`);
+        const prev = document.getElementById('btn-prev-page');
+        const next = document.getElementById('btn-next-page');
+        if (prev) prev.disabled = currentPage === 1;
+        if (next) next.disabled = currentPage === totalPages || totalItems === 0;
 
-        if (paginatedItems.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400 font-medium">Data tidak ditemukan.</td></tr>`;
-            cardBody.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">Data tidak ditemukan.</div>`;
-            return;
+        if (!paginatedItems.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400 font-medium">Data tidak ditemukan.</td></tr>';
+          cardBody.innerHTML = '<div class="text-center py-8 text-slate-400 text-sm">Data tidak ditemukan.</div>';
+          return;
         }
 
+        const role = sessionStorage.getItem('userRole');
+        const permissions = getPermissions();
         paginatedItems.forEach((r, idx) => {
-            const realIndex = startIndex + idx + 1;
-            const dim = `${r.panjang}m x ${r.lebar}m (${r.sisi} Sisi)`;
-            const badgeReg = `<span class="px-2 py-0.5 ${r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'} rounded text-[9px] font-bold inline-block">${r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'TERDAFTAR' : 'BARU'}</span>`;
-            const badgeAkt = `<span class="px-2 py-0.5 ${r.statusKeaktifan === 'AKTIF' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} rounded text-[9px] font-bold inline-block mt-1">${r.statusKeaktifan === 'AKTIF' ? 'AKTIF' : 'TUTUP'}</span>`;
+          const realIndex = startIndex + idx + 1;
+          const dim = `${escapeHTML(r.panjang)}m x ${escapeHTML(r.lebar)}m (${escapeHTML(r.sisi || 1)} Sisi)`;
+          const registered = r.statusRegistrasi === 'SUDAH_TERDAFTAR';
+          const active = r.statusKeaktifan === 'AKTIF';
+          const badgeReg = `<span class="px-2 py-0.5 ${registered ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'} rounded text-[9px] font-bold inline-block">${registered ? 'TERDAFTAR' : 'BARU'}</span>`;
+          const badgeAkt = `<span class="px-2 py-0.5 ${active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'} rounded text-[9px] font-bold inline-block mt-1">${active ? 'AKTIF' : 'TUTUP'}</span>`;
+          const arrayPajak = String(r.jenisPajak || 'Pajak Reklame').split(',').map(p => p.trim()).filter(Boolean);
+          const tagHtml = arrayPajak.map(p => {
+            const lower = p.toLowerCase();
+            const color = lower === 'pajak reklame' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' :
+              lower.includes('restoran') ? 'bg-orange-100 text-orange-700 border-orange-200' :
+              'bg-slate-100 text-slate-700 border-slate-200';
+            return `<span class="px-1.5 py-0.5 ${color} border rounded text-[8px] font-extrabold inline-block mr-1 mt-1.5 uppercase tracking-wide">${escapeHTML(p)}</span>`;
+          }).join('');
 
-            const arrayPajak = (r.jenisPajak || "Reklame").split(',').map(p => p.trim());
-            let tagHtml = '';
-            arrayPajak.forEach(p => {
-                let color = p === 'Reklame' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : (p === 'Restoran' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-700 border-slate-200');
-                tagHtml += `<span class="px-1.5 py-0.5 ${color} border rounded text-[8px] font-extrabold inline-block mr-1 mt-1.5 uppercase tracking-wide">${p}</span>`;
-            });
+          const safeId = escapeHTML(r.id);
+          const btnDelete = role === 'admin'
+            ? `<button onclick="deleteRecord('${safeId}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>`
+            : '';
+          const btnLaporan = role === 'admin' || (role === 'petugas' && permissions.laporan)
+            ? `<button onclick="viewLaporan('${safeId}')" class="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg" title="Cetak"><i class="fa-solid fa-print text-xs"></i></button>` : '';
+          const photoButton = r.photo && r.photo !== 'Tanpa Foto'
+            ? `<button data-photo-id="${safeId}" class="photo-btn px-2 py-1 bg-indigo-50 text-indigo-600 rounded flex items-center justify-center gap-1 mx-auto text-[10px] font-bold hover:bg-indigo-100"><i class="fa-solid fa-image"></i> Lihat</button>`
+            : '<span class="text-[10px] text-slate-400">Tak ada foto</span>';
+          const btnActions = `
+            <button onclick="addAnotherReklame('${safeId}')" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg" title="Tambah Reklame"><i class="fa-solid fa-plus text-xs"></i></button>
+            <button onclick="editRecord('${safeId}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" title="Edit"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+            ${btnDelete}${btnLaporan}
+            <button onclick="openStruk('${safeId}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg" title="Struk"><i class="fa-solid fa-receipt text-xs"></i></button>`;
 
-            const role = sessionStorage.getItem('userRole');
-            
-            // Tombol Delete: Aktif untuk admin, Disabled untuk petugas
-            const btnDelete = role === 'admin' 
-                ? `<button onclick="deleteRecord('${r.id}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus"><i class="fa-solid fa-trash text-xs"></i></button>` 
-                : `<button disabled class="p-2 bg-slate-100 text-slate-300 rounded-lg cursor-not-allowed opacity-50" title="Tidak ada akses hapus"><i class="fa-solid fa-trash text-xs"></i></button>`;
-            
-            const btnLaporan = role === 'admin' || (role === 'petugas' && JSON.parse(sessionStorage.getItem('userPermissions') || '{}').laporan)
-                ? `<button onclick="viewLaporan('${r.id}')" class="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg" title="Cetak"><i class="fa-solid fa-print text-xs"></i></button>` 
-                : '';
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition';
+          tr.innerHTML = `
+            <td class="px-4 py-3 font-mono text-xs text-slate-400 align-top">${realIndex}</td>
+            <td class="px-4 py-3 align-top"><div class="font-bold text-slate-900">${escapeHTML(r.namaUsaha)}</div><div class="text-[11px] text-slate-500">WP: ${escapeHTML(r.namaWP)}</div><div class="text-[10px] text-slate-400 font-mono">${registered ? escapeHTML(r.npwpd) : 'NIK: ' + escapeHTML(r.nik)}</div><div>${tagHtml}</div></td>
+            <td class="px-4 py-3 align-top"><div class="text-[11px] font-bold text-slate-700 max-w-[200px]" title="${escapeHTML(r.jenisReklame)}">${escapeHTML(r.jenisReklame)}</div><div class="text-[11px] text-slate-600 font-mono mt-1">${dim}</div><div class="text-[10px] text-slate-400 mt-0.5">${escapeHTML(r.kelasJalan)}</div></td>
+            <td class="px-4 py-3 text-center align-top whitespace-nowrap">${badgeReg}<br>${badgeAkt}</td>
+            <td class="px-4 py-3 text-center align-top">${photoButton}</td>
+            <td class="px-4 py-3 align-top whitespace-nowrap text-right space-x-0.5">${btnActions}</td>`;
+          tbody.appendChild(tr);
 
-            const btnActions = `
-                <button onclick="addAnotherReklame('${r.id}')" class="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg" title="Tambah Reklame"><i class="fa-solid fa-plus text-xs"></i></button>
-                <button onclick="editRecord('${r.id}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg" title="Edit"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
-                ${btnDelete}
-                ${btnLaporan}
-                <button onclick="openStruk('${r.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg" title="Struk"><i class="fa-solid fa-receipt text-xs"></i></button>
-            `;
-
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 transition";
-            tr.innerHTML = `
-                <td class="px-4 py-3 font-mono text-xs text-slate-400 align-top">${realIndex}</td>
-                <td class="px-4 py-3 align-top">
-                    <div class="font-bold text-slate-900">${r.namaUsaha}</div>
-                    <div class="text-[11px] text-slate-500">WP: ${r.namaWP}</div>
-                    <div class="text-[10px] text-slate-400 font-mono">${r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? r.npwpd : 'NIK: '+r.nik}</div>
-                    <div>${tagHtml}</div>
-                </td>
-                <td class="px-4 py-3 align-top">
-                    <div class="text-[11px] font-bold text-slate-700 max-w-[200px]" title="${r.jenisReklame}">${r.jenisReklame}</div>
-                    <div class="text-[11px] text-slate-600 font-mono mt-1">${dim}</div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">${r.kelasJalan}</div>
-                </td>
-                <td class="px-4 py-3 text-center align-top whitespace-nowrap">${badgeReg}<br>${badgeAkt}</td>
-                <td class="px-4 py-3 text-center align-top">
-                    ${r.photo && r.photo !== 'Tanpa Foto' ? `<button onclick="openPhotoModal('${r.photo}')" class="px-2 py-1 bg-indigo-50 text-indigo-600 rounded flex items-center justify-center gap-1 mx-auto text-[10px] font-bold hover:bg-indigo-100"><i class="fa-solid fa-image"></i> Lihat</button>` : `<span class="text-[10px] text-slate-400">Tak ada foto</span>`}
-                </td>
-                <td class="px-4 py-3 align-top whitespace-nowrap text-right space-x-0.5">${btnActions}</td>
-            `;
-            tbody.appendChild(tr);
-
-            const card = document.createElement('div');
-            card.className = "p-4 space-y-3";
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <div class="font-bold text-sm text-slate-900">${r.namaUsaha}</div>
-                        <div class="text-[11px] text-slate-500">WP: ${r.namaWP}</div>
-                        <div>${tagHtml}</div>
-                    </div>
-                    <div class="text-right whitespace-nowrap">
-                        ${badgeReg} <br> ${badgeAkt}
-                    </div>
-                </div>
-                <div class="bg-slate-50 rounded-lg p-2.5 text-[11px] text-slate-600">
-                    <div class="font-semibold text-slate-800 break-words mb-1">${r.jenisReklame}</div>
-                    <div>Ukuran: <span class="font-mono">${dim}</span></div>
-                </div>
-                <div class="flex justify-between items-center pt-2">
-                    <div>
-                        ${r.photo && r.photo !== 'Tanpa Foto' ? `<button onclick="openPhotoModal('${r.photo}')" class="px-2 py-1.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold"><i class="fa-solid fa-camera mr-1"></i> Foto</button>` : ``}
-                    </div>
-                    <div class="flex gap-1.5">${btnActions}</div>
-                </div>
-            `;
-            cardBody.appendChild(card);
+          const card = document.createElement('div');
+          card.className = 'p-4 space-y-3';
+          card.innerHTML = `
+            <div class="flex justify-between items-start"><div><div class="font-bold text-sm text-slate-900">${escapeHTML(r.namaUsaha)}</div><div class="text-[11px] text-slate-500">WP: ${escapeHTML(r.namaWP)}</div><div>${tagHtml}</div></div><div class="text-right whitespace-nowrap">${badgeReg}<br>${badgeAkt}</div></div>
+            <div class="bg-slate-50 rounded-lg p-2.5 text-[11px] text-slate-600"><div class="font-semibold text-slate-800 break-words mb-1">${escapeHTML(r.jenisReklame)}</div><div>Ukuran: <span class="font-mono">${dim}</span></div></div>
+            <div class="flex justify-between items-center pt-2"><div>${r.photo && r.photo !== 'Tanpa Foto' ? `<button data-photo-id="${safeId}" class="photo-btn px-2 py-1.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold"><i class="fa-solid fa-camera mr-1"></i> Foto</button>` : ''}</div><div class="flex gap-1.5">${btnActions}</div></div>`;
+          cardBody.appendChild(card);
         });
+
+        document.querySelectorAll('.photo-btn').forEach(btn => btn.addEventListener('click', () => {
+          const id = btn.dataset.photoId;
+          const r = records.find(item => item.id === id);
+          if (r?.photo) openPhotoModal(r.photo);
+        }));
       }
 
       function downloadTemplate() {
@@ -2171,25 +2272,36 @@
         document.getElementById('photoModal').classList.remove('flex');
       }
 
-      function showToast(msg, type = "success") {
+      function showToast(msg, type = 'success') {
         const toast = document.getElementById('toast');
         const content = document.getElementById('toast-content');
+        if (!toast || !content) return;
         const bgClass = type === 'success' ? 'border-emerald-200 text-emerald-800' : (type === 'error' ? 'border-rose-200 text-rose-800' : 'border-indigo-200 text-indigo-800');
         const icon = type === 'success' ? 'fa-circle-check text-emerald-600' : (type === 'error' ? 'fa-circle-xmark text-rose-600' : 'fa-circle-info text-indigo-600');
-
         content.className = `px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-sm font-semibold bg-white ${bgClass}`;
-        content.innerHTML = `<i class="fa-solid ${icon} text-lg"></i> <span>${msg}</span>`;
-
+        content.replaceChildren();
+        const iconEl = document.createElement('i');
+        iconEl.className = `fa-solid ${icon} text-lg`;
+        const textEl = document.createElement('span');
+        textEl.textContent = String(msg ?? '');
+        content.append(iconEl, textEl);
         toast.classList.remove('translate-x-full', 'opacity-0');
-        setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); }, 3000);
+        clearTimeout(window.__toastTimer);
+        window.__toastTimer = setTimeout(() => toast.classList.add('translate-x-full', 'opacity-0'), 3000);
       }
 
       function handlePhotoUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
-        if (!file.type.match(/image.*/)) {
+        if (!file.type.match(/^image\//)) {
             showToast("Pilih file gambar yang valid!", "error");
+            event.target.value = '';
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            showToast("Ukuran foto maksimal 10 MB sebelum kompresi.", "error");
+            event.target.value = '';
             return;
         }
 
@@ -2257,9 +2369,9 @@
             item.onclick = () => selectLaporanItem(m);
             item.innerHTML = `
                 <div>
-                    <span class="text-xs font-bold text-indigo-950 block">${m.namaUsaha}</span>
-                    <span class="text-[11px] text-slate-600 block">${m.judulReklame}</span>
-                    <span class="text-[10px] text-slate-400">WP: ${m.namaWP} | ${m.npwpd !== '-' ? m.npwpd : 'NIK: '+m.nik}</span>
+                    <span class="text-xs font-bold text-indigo-950 block">${escapeHTML(m.namaUsaha)}</span>
+                    <span class="text-[11px] text-slate-600 block">${escapeHTML(m.judulReklame)}</span>
+                    <span class="text-[10px] text-slate-400">WP: ${escapeHTML(m.namaWP)} | ${m.npwpd !== '-' ? escapeHTML(m.npwpd) : 'NIK: '+escapeHTML(m.nik)}</span>
                 </div>
                 <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-[9px] uppercase font-bold whitespace-nowrap">Pilih</span>
             `;
@@ -2302,7 +2414,7 @@
                 const select = document.getElementById('selectPetugas');
                 select.innerHTML = '<option value="">-- Semua Petugas --</option>';
                 const officers = [...new Set(records.filter(r => r.namaPetugas && r.namaPetugas !== '-').map(r => r.namaPetugas))];
-                officers.forEach(name => { select.innerHTML += `<option value="${name}">${name}</option>`; });
+                officers.forEach(name => { select.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`); });
                 generateLaporanRekap('');
             } else {
                 // Untuk petugas, langsung generate berdasarkan namanya saja
@@ -2376,18 +2488,18 @@
             if (r.statusKeaktifan === 'TIDAK_AKTIF') labelText = 'TIDAK AKTIF';
 
             const badgeClass = labelText.includes('BARU') ? 'bg-emerald-100 text-emerald-700' : (labelText.includes('TIDAK') ? 'bg-rose-100 text-rose-700' : 'bg-indigo-100 text-indigo-700');
-            const badge = `<span class="${badgeClass} px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold block w-fit mt-1">${labelText}</span>`;
+            const badge = `<span class="${badgeClass} px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold block w-fit mt-1">${escapeHTML(labelText)}</span>`;
             const jumlahSisiText = `${r.sisi || 1} Sisi`;
 
             html += `
                 <tr>
                     <td class="border border-slate-300 p-1.5 text-center align-top">${idx + 1}</td>
-                    <td class="border border-slate-300 p-1.5 align-top font-medium leading-tight">${r.namaWP}<br><span class="text-slate-500 font-normal mt-0.5 block">${r.alamatWP}</span></td>
-                    <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold text-indigo-900">${r.namaUsaha}</span>${badge}<span class="text-slate-500 font-normal mt-0.5 block">${r.alamatUsaha}</span></td>
-                    <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold">${r.judulReklame}</span><br><span class="text-slate-700 font-medium block mt-0.5">${r.jenisReklame}</span></td>
+                    <td class="border border-slate-300 p-1.5 align-top font-medium leading-tight">${escapeHTML(r.namaWP)}<br><span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatWP)}</span></td>
+                    <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold text-indigo-900">${escapeHTML(r.namaUsaha)}</span>${badge}<span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatUsaha)}</span></td>
+                    <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold">${escapeHTML(r.judulReklame)}</span><br><span class="text-slate-700 font-medium block mt-0.5">${escapeHTML(r.jenisReklame)}</span></td>
                     <td class="border border-slate-300 p-1.5 text-center align-top leading-tight">
-                        <span class="font-bold">${r.panjang}m x ${r.lebar}m</span>
-                        <div class="mt-1 pt-1 border-t border-slate-200 text-[9px] font-semibold text-indigo-800">${jumlahSisiText}</div>
+                        <span class="font-bold">${escapeHTML(r.panjang)}m x ${escapeHTML(r.lebar)}m</span>
+                        <div class="mt-1 pt-1 border-t border-slate-200 text-[9px] font-semibold text-indigo-800">${escapeHTML(jumlahSisiText)}</div>
                     </td>
                 </tr>
             `;
@@ -2475,12 +2587,7 @@
           const reg = document.getElementById("filterRegistrasi").value;
           const fPajak = document.getElementById("filterJenisPajak").value;
 
-          const filtered = records.filter((r) => {
-            const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
-            const matchReg = !reg || r.statusRegistrasi === reg;
-            const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
-            return matchQ && matchReg && matchPajak;
-          });
+          const filtered = getFilteredRecords();
 
           if (filtered.length === 0) {
               showToast("Tidak ada data untuk di-export!", "error");
@@ -2571,50 +2678,32 @@
       }
 
       function hitungKalkulatorPajak() {
-          const panjang = parseFloat(document.getElementById('panjang').value) || 0;
-          const lebar = parseFloat(document.getElementById('lebar').value) || 0;
-          const sisi = parseInt(document.getElementById('sisi').value) || 1;
-          const kelasJalanVal = document.getElementById('kelasJalan').value;
-          
-          let njopr = parseFloat(document.getElementById('njopr').value) || 0;
-          const selectJenis = document.getElementById('jenisReklame').value;
+        const panjang = parseNumber(document.getElementById('panjang').value);
+        const lebar = parseNumber(document.getElementById('lebar').value);
+        const sisi = Math.max(1, parseInt(document.getElementById('sisi').value, 10) || 1);
+        const kelasJalanVal = document.getElementById('kelasJalan').value;
+        const njopr = Math.max(0, parseNumber(document.getElementById('njopr').value));
+        const kt = Math.max(0, parseNumber(document.getElementById('ketinggian').value));
+        const lp = Math.max(0, parseNumber(document.getElementById('lamaPemasangan').value, 1));
+        let kj = 2.5;
+        const valUpper = String(kelasJalanVal).toUpperCase();
+        if (valUpper.includes('NEGARA') || valUpper.includes('3,5') || valUpper.includes('3.5')) kj = 3.5;
+        else if (valUpper.includes('PROVINSI') || valUpper.includes(' 3)')) kj = 3.0;
+        else if (valUpper.includes('KOTA') || valUpper.includes('2,5') || valUpper.includes('2.5')) kj = 2.5;
+        else if (valUpper.includes('LINGKUNGAN') || valUpper.includes(' 2)')) kj = 2.0;
 
-          if (selectJenis && TARIF_NJOPR[selectJenis] !== undefined) {
-              njopr = TARIF_NJOPR[selectJenis];
-              document.getElementById('njopr').value = njopr;
-          }
-
-          const kt = parseFloat(document.getElementById('ketinggian').value) || 0;
-          const lp = parseFloat(document.getElementById('lamaPemasangan').value) || 1;
-
-          let kj = 2.5;
-          const valUpper = kelasJalanVal.toUpperCase();
-          if (valUpper.includes("NEGARA") || valUpper.includes("3,5") || valUpper.includes("3.5")) {
-              kj = 3.5;
-          } else if (valUpper.includes("PROVINSI") || valUpper.includes(" 3)")) {
-              kj = 3.0;
-          } else if (valUpper.includes("KOTA") || valUpper.includes("2,5") || valUpper.includes("2.5")) {
-              kj = 2.5;
-          } else if (valUpper.includes("LINGKUNGAN") || valUpper.includes(" 2)")) {
-              kj = 2.0;
-          }
-
-          const luas = panjang * lebar;
-          const persentaseKt = kt / 100;
-
-          const komponenKt = njopr + (njopr * persentaseKt);
-          const nsr = luas * sisi * (komponenKt * kj * lp);
-          
-          const tarifPajak = 0.25;
-          const totalPajak = nsr * tarifPajak;
-
-          document.getElementById('calc-luas').innerText = luas.toFixed(2) + " m²";
-          document.getElementById('calc-nsr').innerText = "Rp " + Math.round(nsr).toLocaleString('id-ID');
-          document.getElementById('calc-total').innerText = "Rp " + Math.round(totalPajak).toLocaleString('id-ID');
+        const luas = panjang * lebar;
+        const komponenKt = njopr * (1 + kt / 100);
+        const nsr = luas * sisi * komponenKt * kj * lp;
+        const totalPajak = nsr * 0.25;
+        setText('calc-luas', `${luas.toFixed(2)} m²`);
+        setText('calc-nsr', `Rp ${Math.round(nsr).toLocaleString('id-ID')}`);
+        setText('calc-total', `Rp ${Math.round(totalPajak).toLocaleString('id-ID')}`);
       }
 
       function selectWPFromDatabase(wpData) {
         document.getElementById('recordId').value = wpData.id || "";
+        document.getElementById('keteranganTindakan').value = 'UPDATE DATA';
         document.getElementById('statusRegistrasi').value = wpData.statusRegistrasi || "SUDAH_TERDAFTAR";
         document.getElementById('namaWP').value = wpData.namaWP || "";
         document.getElementById('npwpd').value = wpData.npwpd !== "-" ? wpData.npwpd : "";
@@ -2637,16 +2726,7 @@
             cb.checked = savedPajakList.includes(cb.value);
         });
 
-        if (wpData.statusRegistrasi === "SUDAH_TERDAFTAR") {
-            document.getElementById('field-npwpd').classList.remove('hidden');
-            document.getElementById('field-nik').classList.add('hidden');
-            document.getElementById('field-alamat-wp').classList.add('hidden');
-        } else {
-            document.getElementById('field-npwpd').classList.add('hidden');
-            document.getElementById('field-nik').classList.remove('hidden');
-            document.getElementById('field-alamat-wp').classList.remove('hidden');
-        }
-
+        updateIdentityFields();
         updateNJOPR();
 
         if (wpData.lat && wpData.lng) {
@@ -2682,42 +2762,30 @@
       }
       
       function renderUsersTable() {
-          const tbody = document.getElementById('users-table-body');
-          tbody.innerHTML = '';
-          
-          if (Object.keys(systemUsers).length === 0) {
-              tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400 font-medium">Belum ada data petugas.</td></tr>`;
-              return;
-          }
-
-          for (const key in systemUsers) {
-              const u = systemUsers[key];
-              if(u.role === 'admin') continue; // Hide admin from table
-
-              const permissions = u.permissions || {};
-              let badges = `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-bold mr-1">Pendataan</span>`;
-              if (permissions.table) badges += `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-bold mr-1">Data Objek</span>`;
-              if (permissions.laporan) badges += `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-bold">Laporan</span>`;
-
-              const tr = document.createElement('tr');
-              tr.className = "hover:bg-slate-50 transition";
-              tr.innerHTML = `
-                  <td class="px-4 py-3 font-bold text-slate-800">${u.name}</td>
-                  <td class="px-4 py-3 font-mono text-xs text-slate-600">${u.username}</td>
-                  <td class="px-4 py-3">
-                      <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] uppercase font-bold text-center">Petugas</span>
-                  </td>
-                  <td class="px-4 py-3">${badges}</td>
-                  <td class="px-4 py-3 text-center whitespace-nowrap">
-                      <button onclick="editUser('${key}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg mr-1" title="Edit Akun"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
-                      <button onclick="deleteUser('${key}', '${u.name}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus Akun"><i class="fa-solid fa-trash text-xs"></i></button>
-                  </td>
-              `;
-              tbody.appendChild(tr);
-          }
+        const tbody = document.getElementById('users-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const entries = Object.entries(systemUsers).filter(([, u]) => u?.role !== 'admin');
+        if (!entries.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-400 font-medium">Belum ada data petugas.</td></tr>';
+          return;
+        }
+        entries.forEach(([key, u]) => {
+          const permissions = u.permissions || {};
+          let badges = '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-bold mr-1">Pendataan</span>';
+          if (permissions.table) badges += '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-bold mr-1">Data Objek</span>';
+          if (permissions.laporan) badges += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-bold">Laporan</span>';
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition';
+          const safeKey = escapeHTML(key);
+          const safeName = escapeHTML(u.name);
+          tr.innerHTML = `<td class="px-4 py-3 font-bold text-slate-800">${safeName}</td><td class="px-4 py-3 font-mono text-xs text-slate-600">${escapeHTML(u.username)}</td><td class="px-4 py-3"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] uppercase font-bold text-center">Petugas</span></td><td class="px-4 py-3">${badges}</td><td class="px-4 py-3 text-center whitespace-nowrap"><button onclick="editUser('${safeKey}')" class="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg mr-1" title="Edit Akun"><i class="fa-solid fa-pen-to-square text-xs"></i></button><button onclick="deleteUser('${safeKey}', '${safeName}')" class="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg" title="Hapus Akun"><i class="fa-solid fa-trash text-xs"></i></button></td>`;
+          tbody.appendChild(tr);
+        });
       }
 
       function openUserModal() {
+        if (!isAdmin()) { showToast('Manajemen akun hanya dapat diakses admin.', 'error'); return; }
           document.getElementById('userForm').reset();
           document.getElementById('userId').value = "";
           document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>Tambah Akun Petugas`;
@@ -2759,68 +2827,80 @@
           document.getElementById('userModal').classList.add('flex');
       }
 
-      function saveUser(event) {
-          event.preventDefault();
-          const btn = document.getElementById('btnSaveUser');
+      async function saveUser(event) {
+        event.preventDefault();
+        if (!isAdmin()) { showToast('Akses ditolak.', 'error'); return; }
+        const btn = document.getElementById('btnSaveUser');
+        const userId = document.getElementById('userId').value || `USER-${Date.now()}`;
+        const name = normalizeText(document.getElementById('userName').value);
+        const username = normalizeUsername(document.getElementById('userUsername').value);
+        const passInput = document.getElementById('userPassword').value;
+        if (!name || username.length < 3) { showToast('Nama dan username wajib valid.', 'error'); return; }
+        if (!document.getElementById('userId').value && passInput.length < 6) { showToast('Password minimal 6 karakter.', 'error'); return; }
+        if (passInput && passInput.length < 6) { showToast('Password minimal 6 karakter.', 'error'); return; }
+        const duplicate = Object.entries(systemUsers).some(([key, u]) => key !== userId && normalizeUsername(u?.username) === username);
+        if (duplicate) { showToast('Username sudah digunakan.', 'error'); return; }
+
+        const oldUser = systemUsers[userId] || {};
+        const userData = {
+          username,
+          role: 'petugas',
+          name,
+          permissions: {
+            table: !!document.getElementById('access-table').checked,
+            laporan: !!document.getElementById('access-laporan').checked
+          },
+          createdAt: oldUser.createdAt || Date.now(),
+          updatedAt: Date.now()
+        };
+        try {
           btn.disabled = true;
-          btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
-
-          const userId = document.getElementById('userId').value || 'USER-' + new Date().getTime();
-          const passInput = document.getElementById('userPassword').value;
-          
-          const userData = {
-              username: document.getElementById('userUsername').value,
-              role: 'petugas', // Force role to petugas from this UI
-              name: document.getElementById('userName').value,
-              permissions: {
-                  table: document.getElementById('access-table').checked,
-                  laporan: document.getElementById('access-laporan').checked
-              }
-          };
-
-          // If editing and password is provided, update it. If new, use provided.
-          if (passInput) {
-              userData.pass = passInput;
-          } else if (systemUsers[userId] && systemUsers[userId].pass) {
-              userData.pass = systemUsers[userId].pass; // Keep old password
-          }
-
-          fetch(`${FIREBASE_URL}/users/${userId}.json`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(userData)
-          })
-          .then(response => {
-              if(!response.ok) throw new Error("Gagal menyimpan data akun");
-              showToast("Akun petugas berhasil disimpan!", "success");
-              closeUserModal();
-              return fetchUsers(); // Refresh table
-          })
-          .catch(err => {
-              showToast("Error sistem: " + err.message, "error");
-          })
-          .finally(() => {
-              btn.disabled = false;
-              btn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
-          });
+          btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+          if (passInput) userData.pass = await hashPassword(passInput);
+          else if (oldUser.pass) userData.pass = oldUser.pass;
+          else throw new Error('Password wajib diisi untuk akun baru.');
+          await putFirebase(`users/${userId}`, userData);
+          showToast('Akun petugas berhasil disimpan!', 'success');
+          closeUserModal();
+          await fetchUsers(false);
+        } catch (err) {
+          showToast('Error sistem: ' + err.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan';
+        }
       }
 
-      function deleteUser(key, name) {
-          if(confirm(`Apakah Anda yakin ingin menghapus akses login untuk petugas "${name}"?`)) {
-              showToast("Menghapus akun...", "info");
-              fetch(`${FIREBASE_URL}/users/${key}.json`, {
-                  method: 'DELETE'
-              })
-              .then(response => {
-                  if(!response.ok) throw new Error("Gagal menghapus akun");
-                  showToast("Akun berhasil dihapus!", "success");
-                  fetchUsers(); // Refresh table
-              })
-              .catch(err => {
-                  showToast("Error koneksi sistem: " + err.message, "error");
-              });
-          }
+      async function deleteUser(key, name) {
+        if (!isAdmin()) { showToast('Akses ditolak.', 'error'); return; }
+        if (!confirm(`Apakah Anda yakin ingin menghapus akses login untuk petugas "${name}"?`)) return;
+        try {
+          showToast('Menghapus akun...', 'info');
+          await putFirebase(`users/${key}`, undefined, 'DELETE');
+          showToast('Akun berhasil dihapus!', 'success');
+          await fetchUsers(false);
+        } catch (err) {
+          showToast('Error koneksi sistem: ' + err.message, 'error');
+        }
       }
+
+      // Tutup modal dengan tombol ESC dan cegah submit ganda.
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        closePhotoModal();
+        closeStruk();
+        closeUserModal();
+      });
+
+      // Klik di luar dropdown pencarian untuk menutupnya.
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('#searchResults') && !event.target.closest('#searchDatabaseInput')) {
+          document.getElementById('searchResults')?.classList.add('hidden');
+        }
+        if (!event.target.closest('#searchLaporanResults') && !event.target.closest('#searchLaporanInput')) {
+          document.getElementById('searchLaporanResults')?.classList.add('hidden');
+        }
+      });
     </script>
   </body>
 </html>
