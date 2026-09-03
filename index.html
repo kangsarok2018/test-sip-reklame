@@ -2595,6 +2595,59 @@
           showToast("PDF berhasil diunduh!", "success");
       }
 
+      function exportTableToExcel() {
+          if (typeof XLSX === 'undefined') { 
+              showToast("Library Excel gagal dimuat. Periksa koneksi internet!", "error"); 
+              return; 
+          }
+          showToast("Memproses file Excel...", "info");
+          
+          const q = document.getElementById('filterSearch').value.toLowerCase();
+          const reg = document.getElementById('filterRegistrasi').value;
+          const fPajak = document.getElementById('filterJenisPajak').value;
+
+          const filtered = records.filter(r => {
+              const matchQ = (r.namaWP || "").toLowerCase().includes(q) || (r.namaUsaha || "").toLowerCase().includes(q) || (r.judulReklame || "").toLowerCase().includes(q);
+              const matchReg = !reg || r.statusRegistrasi === reg;
+              const matchPajak = !fPajak || (r.jenisPajak && r.jenisPajak.includes(fPajak));
+              return matchQ && matchReg && matchPajak;
+          });
+
+          if (filtered.length === 0) {
+              showToast("Tidak ada data untuk diekspor!", "error");
+              return;
+          }
+
+          const dataExcel = filtered.map((r, i) => ({
+              "No": i + 1, 
+              "Status Registrasi": r.statusRegistrasi === 'SUDAH_TERDAFTAR' ? 'TERDAFTAR' : 'BARU',
+              "Status Keaktifan": r.statusKeaktifan || 'AKTIF',
+              "Wajib Pajak": r.namaWP, 
+              "NPWPD": r.npwpd !== "-" ? r.npwpd : "", 
+              "NIK": r.nik !== "-" ? r.nik : "", 
+              "Alamat WP": r.alamatWP,
+              "Nama Usaha": r.namaUsaha, 
+              "Teks Reklame": r.judulReklame, 
+              "Alamat Usaha": r.alamatUsaha,
+              "Kewajiban Pajak": r.jenisPajak || "Pajak Reklame", 
+              "Jenis Reklame": r.jenisReklame, 
+              "Panjang (m)": r.panjang, 
+              "Lebar (m)": r.lebar, 
+              "Sisi": r.sisi,
+              "Kelas Jalan": r.kelasJalan,
+              "Latitude": r.lat,
+              "Longitude": r.lng,
+              "Petugas Pendata": r.namaPetugas, 
+              "Tanggal Input": r.tanggalInput
+          }));
+
+          const ws = XLSX.utils.json_to_sheet(dataExcel);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Data Reklame");
+          XLSX.writeFile(wb, `Data_SIP_Reklame_${new Date().toISOString().slice(0,10)}.xlsx`);
+          showToast("File Excel berhasil diunduh!", "success");
+      }
+
       function updateNJOPR() {
           const selectJenis = document.getElementById('jenisReklame').value;
           const inputNjopr = document.getElementById('njopr');
