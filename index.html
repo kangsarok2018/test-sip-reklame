@@ -2075,9 +2075,9 @@
         if (map) return;
         const defaultPos = [-1.48210, 102.43120];
         map = L.map('map').setView(defaultPos, 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
         marker = L.marker(defaultPos, { draggable: true }).addTo(map);
@@ -2115,9 +2115,9 @@
       function initDashboardMap() {
         if (dashMap) return;
         dashMap = L.map('dashboard-map').setView([-1.48210, 102.43120], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
-          attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(dashMap);
         dashMarkersGroup = L.layerGroup().addTo(dashMap);
       }
