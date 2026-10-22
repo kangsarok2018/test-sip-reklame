@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Chart.js for Analytics & Graphics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel Import/Export (.xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
@@ -85,38 +87,129 @@
       <div id="toast-content" class="px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-sm font-semibold bg-white"></div>
     </div>
 
-    <!-- TAB LOGIN -->
-    <div id="login-section" class="flex flex-col min-h-screen items-center justify-center bg-slate-100 p-4 z-[9999] fixed inset-0">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-200">
-          <div class="text-center mb-6">
-              <div class="bg-indigo-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-100 shadow-inner">
-                  <img src="https://lh3.googleusercontent.com/d/1_7FZisvkbSmNCadKTjaRVrFQpgPoIgNF" alt="Logo" class="w-14 h-14 object-contain" />
-              </div>
-              <h2 class="text-2xl font-black text-slate-800 tracking-tight">SIP-REKLAME</h2>
-              <p class="text-xs text-slate-500 mt-1">Sistem Pendataan Objek Pajak Reklame</p>
+    <!-- HALAMAN UTAMA / LANDING PAGE & LOGIN -->
+    <div id="login-section" class="flex flex-col min-h-screen bg-slate-900 text-slate-100 z-[9999] fixed inset-0 overflow-y-auto">
+      <!-- Top Navbar Landing Page -->
+      <header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50 px-6 py-4 flex justify-between items-center max-w-7xl mx-auto">
+        <div class="flex items-center gap-3">
+          <div class="bg-white p-1 rounded-xl shadow-inner w-10 h-10 flex items-center justify-center overflow-hidden shrink-0">
+            <img src="https://lh3.googleusercontent.com/d/1_7FZisvkbSmNCadKTjaRVrFQpgPoIgNF" alt="Logo Merangin" class="w-full h-full object-contain" />
           </div>
-          
-          <form onsubmit="handleLogin(event)" class="space-y-5">
-              <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Username <span class="text-rose-500">*</span></label>
-                  <div class="relative">
-                      <input type="text" id="login-username" required autocomplete="username" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik username Anda" />
-                      <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400"></i>
-                  </div>
-              </div>
-              <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Password <span class="text-rose-500">*</span></label>
-                  <div class="relative">
-                      <input type="password" id="login-password" required minlength="6" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium bg-slate-50 focus:bg-white transition" placeholder="Ketik password Anda" />
-                      <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-400"></i>
-                  </div>
-              </div>
-              <button type="submit" id="btn-login" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition-all duration-200 flex items-center justify-center gap-2 mt-2">
-                  <i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem
-              </button>
-          </form>
+          <div>
+            <h1 class="font-bold text-base sm:text-lg leading-tight tracking-wide text-white">SIP-REKLAME</h1>
+            <p class="text-[10px] text-indigo-300">Pemerintah Kabupaten Merangin</p>
+          </div>
         </div>
-      </div>
+        <div class="text-xs text-slate-400 font-medium">
+          Portal Resmi BPPRD
+        </div>
+      </header>
+
+      <!-- Hero Section -->
+      <main class="max-w-7xl mx-auto px-6 py-12 lg:py-20 flex-1 w-full space-y-16">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div class="space-y-6 text-center lg:text-left">
+            <span class="px-3.5 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-full text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span> BPPRD Kabupaten Merangin
+            </span>
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+              Sistem Pendataan & <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-teal-300">Geotagging Objek Pajak Reklame</span>
+            </h1>
+            <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mx-auto lg:mx-0">
+              Platform terpadu untuk monitoring lapangan, pendataan objek pajak reklame, perhitungan potensi pendapatan daerah secara akurat, dan pemetaan berbasis GIS. Silakan masukkan kredensial akun Anda di samping untuk masuk ke sistem.
+            </p>
+          </div>
+
+          <!-- Login Card Box pada Hero -->
+          <div id="login-form-anchor" class="bg-slate-800/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-slate-700/80 w-full max-w-md mx-auto">
+            <div class="text-center mb-6">
+              <div class="bg-indigo-950 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-800/50 shadow-inner">
+                <img src="https://lh3.googleusercontent.com/d/1_7FZisvkbSmNCadKTjaRVrFQpgPoIgNF" alt="Logo" class="w-10 h-10 object-contain" />
+              </div>
+              <h2 class="text-xl font-black text-white tracking-tight">Login Petugas / Admin</h2>
+              <p class="text-xs text-slate-400 mt-1">Masukkan kredensial akun Anda untuk melanjutkan</p>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">Username <span class="text-rose-400">*</span></label>
+                <div class="relative">
+                  <input type="text" id="login-username" required autocomplete="username" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700 bg-slate-900 text-white focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium transition" placeholder="Ketik username Anda" />
+                  <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-500"></i>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">Password <span class="text-rose-400">*</span></label>
+                <div class="relative">
+                  <input type="password" id="login-password" required minlength="6" autocomplete="current-password" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700 bg-slate-900 text-white focus:ring-2 focus:ring-indigo-500 text-sm outline-none font-medium transition" placeholder="Ketik password Anda" />
+                  <i class="fa-solid fa-lock absolute left-3.5 top-3.5 text-slate-500"></i>
+                </div>
+              </div>
+              <button type="submit" id="btn-login" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all duration-200 flex items-center justify-center gap-2 mt-4">
+                <i class="fa-solid fa-right-to-bracket"></i> Masuk Sistem
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- FITUR CEK DATA OBJEK PUBLIK (TANPA LOGIN) -->
+        <div class="bg-slate-800/60 border border-slate-700/80 p-6 sm:p-8 rounded-3xl space-y-6">
+          <div class="text-center max-w-2xl mx-auto space-y-2">
+            <span class="px-3 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-300 rounded-full text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5">
+              <i class="fa-solid fa-magnifying-glass"></i> Layanan Mandiri Publik
+            </span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">Cek Status Keterdaftaran Objek & Wajib Pajak</h2>
+            <p class="text-slate-400 text-xs sm:text-sm">Ketik nama usaha atau nama wajib pajak untuk memeriksa apakah objek reklame Anda sudah terdaftar dalam database BPPRD Kabupaten Merangin.</p>
+          </div>
+
+          <div class="max-w-2xl mx-auto space-y-4">
+            <div class="relative">
+              <input
+                type="text"
+                id="publicSearchInput"
+                onkeyup="publicSearchRecords(this.value)"
+                placeholder="Cth: KAGUMI MOBILINDO atau nama Wajib Pajak..."
+                class="w-full pl-11 pr-4 py-3.5 rounded-xl border border-slate-600 bg-slate-900 text-white text-sm focus:ring-2 focus:ring-teal-500 outline-none font-medium shadow-inner"
+              />
+              <i class="fa-solid fa-search absolute left-4 top-4 text-slate-400 text-base"></i>
+            </div>
+
+            <div id="publicSearchResults" class="hidden bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-72 overflow-y-auto custom-scrollbar divide-y divide-slate-800"></div>
+          </div>
+        </div>
+
+        <!-- Features Grid -->
+        <div id="fitur" class="pt-6 border-t border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-slate-800/50 border border-slate-700/60 p-6 rounded-2xl space-y-3">
+            <div class="w-12 h-12 bg-indigo-600/20 text-indigo-400 rounded-xl flex items-center justify-center text-xl">
+              <i class="fa-solid fa-map-location-dot"></i>
+            </div>
+            <h3 class="font-bold text-white text-base">Geotagging & Mapping</h3>
+            <p class="text-slate-400 text-xs leading-relaxed">Pengambilan titik koordinat GPS secara akurat langsung dari perangkat lapangan dan visualisasi peta interaktif.</p>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 p-6 rounded-2xl space-y-3">
+            <div class="w-12 h-12 bg-emerald-600/20 text-emerald-400 rounded-xl flex items-center justify-center text-xl">
+              <i class="fa-solid fa-calculator"></i>
+            </div>
+            <h3 class="font-bold text-white text-base">Kalkulator Pajak Reklame</h3>
+            <p class="text-slate-400 text-xs leading-relaxed">Perhitungan otomatis Nilai Sewa Reklame (NSR) dan estimasi besaran pajak berdasarkan jenis, kelas jalan, dan dimensi.</p>
+          </div>
+
+          <div class="bg-slate-800/50 border border-slate-700/60 p-6 rounded-2xl space-y-3">
+            <div class="w-12 h-12 bg-amber-600/20 text-amber-400 rounded-xl flex items-center justify-center text-xl">
+              <i class="fa-solid fa-file-excel"></i>
+            </div>
+            <h3 class="font-bold text-white text-base">Excel & PDF Reporting</h3>
+            <p class="text-slate-400 text-xs leading-relaxed">Ekspor laporan rekapitulasi data objek pajak ke format Excel (.xlsx), PDF, maupun pencetakan struk bukti pendataan.</p>
+          </div>
+        </div>
+      </main>
+
+      <footer class="w-full py-6 text-center text-xs text-slate-500 border-t border-slate-800">
+        &copy; 2026 Badan Pengelola Pajak dan Retribusi Daerah Kabupaten Merangin. All rights reserved.
+      </footer>
+    </div>
 
     <!-- WADAH UTAMA APLIKASI (Disembunyikan saat belum login) -->
     <div id="main-app" class="hidden flex-col min-h-screen">
@@ -134,7 +227,6 @@
               </div>
             </div>
             
-            <!-- Tambahan: Area Status Online & Tombol Logout khusus Mobile -->
             <div class="flex items-center gap-2 sm:hidden shrink-0">
               <span id="sync-status-mobile" class="px-2 py-1 bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 rounded-full text-[10px] font-semibold flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> <span class="hidden min-[380px]:inline">Online</span>
@@ -145,7 +237,7 @@
             </div>
           </div>
 
-          <!-- Desktop Menu (Sembunyi saat mobile) -->
+          <!-- Desktop Menu -->
           <div class="hidden sm:flex items-center gap-4">
             <nav class="flex items-center bg-indigo-950/60 p-1 rounded-xl w-auto text-sm font-medium">
               <button id="tab-btn-dashboard" onclick="switchTab('dashboard')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-white bg-indigo-600 shadow"><i class="fa-solid fa-chart-pie mr-1.5"></i> Dashboard</button>
@@ -156,7 +248,6 @@
               <button id="tab-btn-users" onclick="switchTab('users')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 text-indigo-200 hover:text-white hidden"><i class="fa-solid fa-users-gear mr-1.5"></i> Akun</button>
             </nav>
             
-            <!-- User Profile & Logout Box -->
             <div class="flex items-center gap-4 pl-4 border-l border-indigo-700/50">
                 <div class="text-right hidden md:block">
                   <p id="display-nama" class="text-xs font-bold text-white">Pengguna</p>
@@ -245,7 +336,6 @@
             </div>
           </div>
 
-          <!-- FITUR 1: CHART.JS ANALYTICS & VISUAL GRAPHICS -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
               <div class="flex justify-between items-center">
@@ -646,17 +736,24 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-2 w-full md:w-auto justify-end mt-2 md:mt-0">
+            <div class="flex items-center gap-2 w-full md:w-auto justify-end mt-2 md:mt-0 flex-wrap">
               <button
                 onclick="fetchRecordsFromGoogleSheet(true)"
-                class="flex-1 sm:flex-none px-3 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition"
+                class="px-3 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition"
               >
                 <i class="fa-solid fa-rotate"></i> Muat Ulang
               </button>
-              <button onclick="exportTableToPDF()" class="hidden sm:flex px-3 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 text-xs font-semibold items-center gap-1.5 shadow-sm transition">
-                <i class="fa-solid fa-file-pdf"></i> Export PDF
+              <button onclick="exportTableToPDF()" class="px-3 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl hover:bg-rose-100 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                <i class="fa-solid fa-file-pdf"></i> PDF
               </button>
-              <button onclick="downloadTemplate()" class="hidden sm:flex px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 text-xs font-semibold items-center gap-1.5">
+              <button onclick="exportTableToExcel()" class="px-3 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                <i class="fa-solid fa-file-excel"></i> Export Excel
+              </button>
+              <input type="file" id="importExcelFile" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleImportExcel(event)" />
+              <button onclick="document.getElementById('importExcelFile').click()" class="px-3 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition">
+                <i class="fa-solid fa-file-import"></i> Import Excel
+              </button>
+              <button onclick="downloadTemplate()" class="px-3 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-xl hover:bg-slate-200 text-xs font-semibold flex items-center gap-1.5">
                 <i class="fa-solid fa-file-excel"></i> Template Excel
               </button>
             </div>
@@ -821,6 +918,10 @@
                       <tr>
                         <td class="py-1 text-slate-500 align-top">Lokasi Pasang</td>
                         <td class="py-1 text-slate-800" id="lap-alamat-usaha"></td>
+                      </tr>
+                      <tr>
+                        <td class="py-1 text-slate-500 align-top">Koordinat</td>
+                        <td class="py-1 text-slate-800 font-mono text-[10px] sm:text-xs" id="lap-koordinat"></td>
                       </tr>
                     </tbody>
                   </table>
@@ -1038,6 +1139,10 @@
                     <td class="font-mono font-bold text-slate-800">: <span id="str-npwpd"></span></td>
                   </tr>
                   <tr>
+                    <td class="text-slate-500">Nomor HP</td>
+                    <td class="font-mono font-bold text-slate-800">: <span id="str-hp"></span></td>
+                  </tr>
+                  <tr>
                     <td class="text-slate-500">Nama Usaha/Toko</td>
                     <td class="font-bold text-indigo-900">: <span id="str-nama-usaha"></span></td>
                   </tr>
@@ -1130,7 +1235,7 @@
           <span class="text-[9px] font-bold">Akun</span>
         </button>
       </div>
-    </div> <!-- PENUTUP WADAH UTAMA APLIKASI -->
+    </div> 
 
     <!-- Leaflet JS & jsPDF Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1140,9 +1245,7 @@
     <script>
       const FIREBASE_URL = "https://sip-pajak-reklame-v2-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
       
-      // Data Pengguna (Sekarang diambil dari Firebase)
       let systemUsers = {};
-
       let map, marker, dashMap, dashMarkersGroup;
       let records = [];
       let currentPage = 1;
@@ -1151,10 +1254,6 @@
       let chartKelasInstance = null;
       let isAppInitialized = false;
 
-
-      // ============================================================
-      // UTILITAS KEAMANAN & VALIDASI FRONTEND
-      // ============================================================
       function escapeHTML(value) {
         return String(value ?? '')
           .replace(/&/g, '&amp;')
@@ -1221,7 +1320,6 @@
         if (saved.startsWith('sha256$')) {
           return { ok: saved === `sha256$${await sha256(value)}`, legacy: false };
         }
-        // Kompatibilitas sementara untuk akun lama yang masih plaintext.
         return { ok: saved === value, legacy: true };
       }
 
@@ -1341,7 +1439,6 @@
         "[18A] REKLAME HURUF DIBAWAH 50 CM": 50000
       };
       
-      // 1. Tampilkan UI berdasarkan sesi yang tersimpan.
       function toggleAuthUI() {
         const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true';
         const loginSection = document.getElementById('login-section');
@@ -1359,6 +1456,8 @@
           loginSection.classList.add('flex');
           mainApp.classList.add('hidden');
           mainApp.classList.remove('flex');
+          // Fetch records juga untuk publik pencarian di landing page
+          fetchPublicRecordsForLanding();
         }
       }
 
@@ -1368,8 +1467,77 @@
         await fetchUsers(false);
         if (sessionStorage.getItem('isLoggedIn') === 'true' && sessionStorage.getItem('userId')) {
           checkAuth();
+        } else {
+          fetchPublicRecordsForLanding();
         }
       });
+
+      function fetchPublicRecordsForLanding() {
+        fetch(`${FIREBASE_URL}/reklame.json`)
+          .then(res => res.json())
+          .then(data => {
+            records = [];
+            if (data) {
+              for (let key in data) {
+                let item = data[key];
+                item.id = key;
+                records.push(item);
+              }
+            }
+          })
+          .catch(err => console.log("Public fetch records background:", err));
+      }
+
+      function publicSearchRecords(query) {
+        const resultsContainer = document.getElementById('publicSearchResults');
+        if (!resultsContainer) return;
+        resultsContainer.innerHTML = '';
+
+        const q = normalizeText(query).toLowerCase();
+        if (!q) {
+          resultsContainer.classList.add('hidden');
+          return;
+        }
+
+        const matches = records.filter(r =>
+          (r.namaUsaha || "").toLowerCase().includes(q) ||
+          (r.namaWP || "").toLowerCase().includes(q) ||
+          (r.npwpd && String(r.npwpd).toLowerCase().includes(q))
+        );
+
+        if (matches.length === 0) {
+          resultsContainer.innerHTML = `<div class="p-4 text-xs text-slate-400 text-center">Data objek atau wajib pajak tidak ditemukan dalam sistem.</div>`;
+          resultsContainer.classList.remove('hidden');
+          return;
+        }
+
+        matches.forEach(r => {
+          const registered = r.statusRegistrasi === 'SUDAH_TERDAFTAR';
+          const active = r.statusKeaktifan === 'AKTIF';
+          const badgeReg = `<span class="px-2 py-0.5 ${registered ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} rounded text-[9px] font-bold">${registered ? 'TERDAFTAR' : 'BARU'}</span>`;
+          const badgeAkt = `<span class="px-2 py-0.5 ${active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'} rounded text-[9px] font-bold">${active ? 'AKTIF' : 'TUTUP'}</span>`;
+
+          const div = document.createElement('div');
+          div.className = "p-4 hover:bg-slate-800/80 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+          div.innerHTML = `
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-sm">${escapeHTML(r.namaUsaha)}</span>
+                ${badgeReg} ${badgeAkt}
+              </div>
+              <p class="text-xs text-slate-400">Wajib Pajak: <span class="text-slate-200 font-semibold">${escapeHTML(r.namaWP)}</span> (${registered ? 'NPWPD: ' + escapeHTML(r.npwpd) : 'NIK: ' + escapeHTML(r.nik)})</p>
+              <p class="text-[11px] text-indigo-300"><i class="fa-solid fa-location-dot mr-1"></i> ${escapeHTML(r.alamatUsaha)}</p>
+              <p class="text-[11px] text-slate-300 font-medium">Jenis Reklame: ${escapeHTML(r.jenisReklame)}</p>
+            </div>
+            <div class="text-[10px] text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+              Terdata: ${escapeHTML(r.tanggalInput || '-')}
+            </div>
+          `;
+          resultsContainer.appendChild(div);
+        });
+
+        resultsContainer.classList.remove('hidden');
+      }
 
       async function fetchUsers(showError = true) {
         try {
@@ -1377,11 +1545,22 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const data = await response.json();
           systemUsers = data || {};
-          renderUsersTable();
-          return systemUsers;
         } catch (error) {
           console.error('Gagal mengambil data user:', error);
-          if (showError) showToast('Gagal memuat pengaturan akun.', 'error');
+          if (showError) showToast('Gagal memuat pengaturan akun dari server.', 'error');
+        } finally {
+          if (!systemUsers || Object.keys(systemUsers).length === 0) {
+             systemUsers = {
+                 "DEMO-ADMIN-CANVAS": {
+                     name: "Administrator Demo",
+                     username: "admin",
+                     pass: "admin123",
+                     role: "admin",
+                     permissions: { table: true, laporan: true }
+                 }
+             };
+          }
+          renderUsersTable();
           return systemUsers;
         }
       }
@@ -1416,8 +1595,7 @@
           const verification = await verifyPassword(pass, foundUser.pass);
           if (!verification.ok) throw new Error('INVALID_CREDENTIALS');
 
-          // Migrasi password plaintext lama ke hash SHA-256 saat login berhasil.
-          if (verification.legacy) {
+          if (verification.legacy && foundKey !== "DEMO-ADMIN-CANVAS") {
             try {
               const migrated = { ...foundUser, pass: await hashPassword(pass) };
               await putFirebase(`users/${foundKey}`, migrated);
@@ -1457,29 +1635,26 @@
       }
 
       function handleLogout() {
-          if(confirm("Apakah Anda yakin ingin keluar dari sistem?")) {
-              sessionStorage.removeItem('isLoggedIn');
-              sessionStorage.removeItem('loggedUser');
-              sessionStorage.removeItem('userRole');
-              sessionStorage.removeItem('userId');
-              sessionStorage.removeItem('userPermissions');
-              
-              document.getElementById('login-username').value = "";
-              document.getElementById('login-password').value = "";
+          sessionStorage.removeItem('isLoggedIn');
+          sessionStorage.removeItem('loggedUser');
+          sessionStorage.removeItem('userRole');
+          sessionStorage.removeItem('userId');
+          sessionStorage.removeItem('userPermissions');
+          
+          document.getElementById('login-username').value = "";
+          document.getElementById('login-password').value = "";
 
-              // Bersihkan state lokal agar data akun sebelumnya tidak tertinggal.
-              resetForm();
-              records = [];
-              currentPage = 1;
-              systemUsers = {};
-              if (dashMarkersGroup) dashMarkersGroup.clearLayers();
-              if (chartKategoriInstance) { chartKategoriInstance.destroy(); chartKategoriInstance = null; }
-              if (chartKelasInstance) { chartKelasInstance.destroy(); chartKelasInstance = null; }
-              switchTab('dashboard');
+          resetForm();
+          records = [];
+          currentPage = 1;
+          systemUsers = {};
+          if (dashMarkersGroup) dashMarkersGroup.clearLayers();
+          if (chartKategoriInstance) { chartKategoriInstance.destroy(); chartKategoriInstance = null; }
+          if (chartKelasInstance) { chartKelasInstance.destroy(); chartKelasInstance = null; }
+          switchTab('dashboard');
 
-              showToast("Anda telah keluar dari sesi.", "info");
-              checkAuth();
-          }
+          showToast("Anda telah keluar dari sesi.", "info");
+          checkAuth();
       }
 
       function applyRolePermissions() {
@@ -1550,13 +1725,12 @@
 
       window.switchTab = function(tab) {
         if (!canAccess(tab)) { showToast('Anda tidak memiliki hak akses ke menu ini.', 'error'); return; }
-        // 1. Sembunyikan semua konten tab
+        
         ['view-dashboard', 'view-form', 'view-table', 'view-audit', 'view-laporan', 'view-users'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.add('hidden');
         });
 
-        // 2. Reset tampilan tombol navigasi (Desktop)
         ['tab-btn-dashboard', 'tab-btn-form', 'tab-btn-table', 'tab-btn-audit', 'tab-btn-laporan', 'tab-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -1565,7 +1739,6 @@
             }
         });
 
-        // 3. Reset tampilan tombol navigasi (Mobile)
         ['mob-btn-dashboard', 'mob-btn-form', 'mob-btn-table', 'mob-btn-audit', 'mob-btn-laporan', 'mob-btn-users'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -1574,25 +1747,21 @@
             }
         });
 
-        // 4. Tampilkan view konten target
         const activeView = document.getElementById(`view-${tab}`);
         if (activeView) activeView.classList.remove('hidden');
 
-        // 5. Aktifkan style tombol navigasi (Desktop) target
         const activeTabBtn = document.getElementById(`tab-btn-${tab}`);
         if (activeTabBtn) {
             activeTabBtn.classList.remove('text-indigo-200', 'hover:text-white');
             activeTabBtn.classList.add('text-white', 'bg-indigo-600', 'shadow');
         }
 
-        // 6. Aktifkan style tombol navigasi (Mobile) target
         const mobBtn = document.getElementById(`mob-btn-${tab}`);
         if (mobBtn) {
             mobBtn.classList.remove('text-slate-400');
             mobBtn.classList.add('text-indigo-600');
         }
 
-        // Action spesifik untuk setiap tab
         if (tab === 'dashboard') {
             setTimeout(() => { 
                 if (dashMap) dashMap.invalidateSize(); 
@@ -1602,7 +1771,7 @@
         if (tab === 'form') setTimeout(() => { if (map) map.invalidateSize(); }, 200);
         if (tab === 'audit') fetchAuditLogs();
         if (tab === 'laporan') resetLaporanSearch();
-        if (tab === 'users') fetchUsers(); // Refresh data users saat tab dibuka
+        if (tab === 'users') fetchUsers(); 
       };
 
       function fetchRecordsFromGoogleSheet(isManualTrigger = false) {
@@ -1653,7 +1822,7 @@
           timestamp: new Date().toLocaleString('id-ID'),
           createdAt: Date.now(),
           petugas: petugas || "Sistem",
-          action: action, // "TAMBAH", "UPDATE", "HAPUS"
+          action: action, 
           namaUsaha: namaUsaha || "-",
           detail: detail || "-"
         };
@@ -1788,6 +1957,7 @@
           namaWP: namaWPVal,
           npwpd: normalizeText(document.getElementById('npwpd').value) || '-',
           nik: normalizeText(document.getElementById('nik').value) || '-',
+          nomorHP: nomorHP || '-',
           alamatWP: normalizeText(document.getElementById('alamatWP').value) || '-',
           namaUsaha: namaUsahaVal,
           judulReklame: normalizeText(document.getElementById('judulReklame').value),
@@ -1832,7 +2002,13 @@
         const target = records.find(r => r.id === id);
         if (!target) return;
         const namaUsahaTarget = target.namaUsaha || 'Objek';
-        if (!confirm(`Apakah Anda yakin ingin menghapus data "${namaUsahaTarget}" SECARA PERMANEN dari Firebase?`)) return;
+        
+        const userConfirm = window.prompt(`Ketik "HAPUS" untuk konfirmasi penghapusan ${namaUsahaTarget}`);
+        if (userConfirm !== "HAPUS") {
+           showToast('Penghapusan dibatalkan.', 'info');
+           return;
+        }
+
         try {
           showToast('Menghapus data dari server...', 'info');
           await putFirebase(`reklame/${id}`, undefined, 'DELETE');
@@ -2032,7 +2208,6 @@
 
         const terdaftarObjek = records.filter(r => r.statusRegistrasi === "SUDAH_TERDAFTAR").length;
         
-        // Menghitung jumlah Wajib Pajak (NPWPD) yang unik
         const uniqueNPWPDs = new Set();
         records.forEach(r => {
             if (r.statusRegistrasi === "SUDAH_TERDAFTAR") {
@@ -2040,7 +2215,6 @@
                 if (npwpd && npwpd !== "-") {
                     uniqueNPWPDs.add(npwpd);
                 } else {
-                    // Jika status terdaftar tapi NPWPD kosong/strip, tetap dihitung per entitas ID-nya
                     uniqueNPWPDs.add(r.id); 
                 }
             }
@@ -2056,7 +2230,6 @@
         document.getElementById('dash-total-aktif').innerText = aktif;
         document.getElementById('dash-total-tutup').innerText = tutup;
 
-        // Progress bar tetap menggunakan perbandingan jumlah *objek*
         const pct = records.length > 0 ? (terdaftarObjek / records.length) * 100 : 0;
         document.getElementById('bar-terdaftar').style.width = pct + "%";
 
@@ -2274,14 +2447,103 @@
       }
 
       function downloadTemplate() {
-        const csvHeader = "ID Record,Status Registrasi,Status Keaktifan,Nama WP,NPWPD,NIK,Nomor HP,Alamat WP,Nama Usaha,Judul Reklame,Alamat Usaha,Jenis Reklame,Panjang,Lebar,Sisi,Kelas Jalan,Latitude,Longitude,Foto,Tanggal Input,Nama Petugas,Keterangan\n";
-        const blob = new Blob([csvHeader], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", "Template_SIP_Reklame.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const headers = [
+          "ID Record", "Status Registrasi", "Status Keaktifan", "Nama WP", "NPWPD", "NIK", 
+          "Nomor HP", "Alamat WP", "Nama Usaha", "Judul Reklame", "Alamat Usaha", "Jenis Reklame", 
+          "Panjang", "Lebar", "Sisi", "Kelas Jalan", "Latitude", "Longitude", "Foto", 
+          "Tanggal Input", "Nama Petugas", "Keterangan"
+        ];
+        
+        const ws = XLSX.utils.aoa_to_sheet([headers]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template_SIP_Reklame");
+        XLSX.writeFile(wb, "Template_SIP_Reklame.xlsx");
+      }
+
+      async function handleImportExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!isAdmin()) {
+            showToast("Hanya Administrator yang dapat mengimpor data masal.", "error");
+            event.target.value = '';
+            return;
+        }
+
+        showToast("Membaca file Excel...", "info");
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheet];
+                const json = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+
+                if (json.length === 0) {
+                    showToast("File Excel kosong atau format tidak sesuai!", "error");
+                    return;
+                }
+
+                showToast(`Memproses ${json.length} baris data... Mohon tunggu.`, "info");
+                
+                let successCount = 0;
+                const now = Date.now();
+                const loggedUser = sessionStorage.getItem('loggedUser') || 'Admin Import';
+
+                for (let i = 0; i < json.length; i++) {
+                    const row = json[i];
+                    if (!row["Nama Usaha"] && !row["Nama WP"]) continue;
+
+                    const recordId = row["ID Record"] || `REC-${now + i}`;
+                    const isNew = !row["ID Record"];
+
+                    const newRecord = {
+                        id: recordId,
+                        createdAt: isNew ? now + i : (now - 10000), 
+                        updatedAt: now + i,
+                        namaPetugas: row["Nama Petugas"] || loggedUser,
+                        statusRegistrasi: row["Status Registrasi"] || "BELUM_TERDAFTAR",
+                        statusKeaktifan: row["Status Keaktifan"] || "AKTIF",
+                        keteranganTindakan: row["Keterangan"] || "IMPORT EXCEL",
+                        jenisPajak: "Pajak Reklame",
+                        namaWP: String(row["Nama WP"] || "-"),
+                        npwpd: String(row["NPWPD"] || "-"),
+                        nik: String(row["NIK"] || "-"),
+                        nomorHP: String(row["Nomor HP"] || "-"),
+                        alamatWP: String(row["Alamat WP"] || "-"),
+                        namaUsaha: String(row["Nama Usaha"] || "-"),
+                        judulReklame: String(row["Judul Reklame"] || "-"),
+                        alamatUsaha: String(row["Alamat Usaha"] || "-"),
+                        jenisReklame: String(row["Jenis Reklame"] || ""),
+                        panjang: String(row["Panjang"] || "0"),
+                        lebar: String(row["Lebar"] || "0"),
+                        sisi: String(row["Sisi"] || "1"),
+                        kelasJalan: String(row["Kelas Jalan"] || ""),
+                        njopr: "0",
+                        ketinggian: "0",
+                        lamaPemasangan: "1",
+                        lat: String(row["Latitude"] || ""),
+                        lng: String(row["Longitude"] || ""),
+                        photo: row["Foto"] || "Tanpa Foto",
+                        tanggalInput: row["Tanggal Input"] || new Date().toLocaleString('id-ID')
+                    };
+
+                    await putFirebase(`reklame/${recordId}`, newRecord);
+                    successCount++;
+                }
+
+                showToast(`Selesai! Berhasil mengimpor ${successCount} data.`, "success");
+                logAuditTrail('TAMBAH', loggedUser, "Import Excel Masal", `Mengimpor ${successCount} data objek reklame`);
+                fetchRecordsFromGoogleSheet(false);
+            } catch (error) {
+                showToast("Gagal memproses file Excel: " + error.message, "error");
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
       }
 
       function openPhotoModal(src) {
@@ -2439,7 +2701,6 @@
                 officers.forEach(name => { select.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`); });
                 generateLaporanRekap('');
             } else {
-                // Untuk petugas, langsung generate berdasarkan namanya saja
                 generateLaporanRekap(loggedUser);
             }
         }
@@ -2461,6 +2722,7 @@
         document.getElementById('lap-nama-usaha').innerText = r.namaUsaha || "-";
         document.getElementById('lap-judul').innerText = r.judulReklame || "-";
         document.getElementById('lap-alamat-usaha').innerText = r.alamatUsaha || "-";
+        document.getElementById('lap-koordinat').innerText = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : "-";
         document.getElementById('lap-jenis').innerText = r.jenisReklame || "-";
         document.getElementById('lap-dimensi').innerText = `${r.panjang} M x ${r.lebar} M (${r.sisi} Sisi)`;
         document.getElementById('lap-kelas').innerText = r.kelasJalan || "-";
@@ -2547,8 +2809,8 @@
         document.getElementById('str-nama-usaha').innerText = r.namaUsaha;
         document.getElementById('str-alamat-usaha').innerText = r.alamatUsaha;
         document.getElementById('str-wp').innerText = r.namaWP;
-         const strHp = document.getElementById('str-hp');
-         if (strHp) strHp.innerText = r.nomorHP || '-';
+        const strHp = document.getElementById('str-hp');
+        if (strHp) strHp.innerText = r.nomorHP || '-';
         document.getElementById('str-npwpd').innerText = (r.statusRegistrasi === "SUDAH_TERDAFTAR") ? r.npwpd : r.nik;
         document.getElementById('str-naskah').innerText = r.judulReklame;
         document.getElementById('str-jenis').innerText = r.jenisReklame;
@@ -2602,8 +2864,7 @@
 
       document.addEventListener('input', function(e) {
         if (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'search')) {
-            // Abaikan uppercase otomatis pada login section dan form pembuatan username petugas
-            if (e.target.id === 'login-username' || e.target.id === 'login-password' || e.target.id === 'userUsername') return;
+            if (e.target.id === 'login-username' || e.target.id === 'login-password' || e.target.id === 'userUsername' || e.target.id === 'publicSearchInput') return;
             
             const start = e.target.selectionStart;
             const end = e.target.selectionEnd;
@@ -2613,10 +2874,6 @@
       });
 
       function exportTableToPDF() {
-          const q = document.getElementById("filterSearch").value.toLowerCase();
-          const reg = document.getElementById("filterRegistrasi").value;
-          const fPajak = document.getElementById("filterJenisPajak").value;
-
           const filtered = getFilteredRecords();
 
           if (filtered.length === 0) {
@@ -2654,6 +2911,7 @@
           const doc = new jsPDF('landscape'); 
 
           let title = "LAPORAN REKAPITULASI OBJEK PAJAK DAERAH";
+          const fPajak = document.getElementById("filterJenisPajak").value;
           if (fPajak) title = "LAPORAN REKAPITULASI " + fPajak.toUpperCase();
 
           doc.setFontSize(14);
@@ -2693,6 +2951,65 @@
           if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
           doc.save(fileName + ".pdf");
           showToast("PDF berhasil diunduh!", "success");
+      }
+
+      function exportTableToExcel() {
+          const filtered = getFilteredRecords();
+
+          if (filtered.length === 0) {
+              showToast("Tidak ada data untuk di-export!", "error");
+              return;
+          }
+
+          showToast("Menyiapkan dokumen Excel...", "info");
+
+          const headers = [
+              "ID Record", "Status Registrasi", "Status Keaktifan", "Nama WP", "NPWPD", "NIK", 
+              "Nomor HP", "Alamat WP", "Nama Usaha", "Judul Reklame", "Alamat Usaha", "Jenis Reklame", 
+              "Panjang", "Lebar", "Sisi", "Kelas Jalan", "Latitude", "Longitude", "Foto", 
+              "Tanggal Input", "Nama Petugas", "Keterangan"
+          ];
+
+          const dataToExport = [headers];
+
+          filtered.forEach(r => {
+              const row = [
+                  r.id || "",
+                  r.statusRegistrasi || "BELUM_TERDAFTAR",
+                  r.statusKeaktifan || "AKTIF",
+                  r.namaWP || "-",
+                  r.npwpd || "-",
+                  r.nik || "-",
+                  r.nomorHP || "-",
+                  r.alamatWP || "-",
+                  r.namaUsaha || "-",
+                  r.judulReklame || "-",
+                  r.alamatUsaha || "-",
+                  r.jenisReklame || "",
+                  r.panjang || "0",
+                  r.lebar || "0",
+                  r.sisi || "1",
+                  r.kelasJalan || "",
+                  r.lat || "",
+                  r.lng || "",
+                  (r.photo && r.photo !== "Tanpa Foto") ? "Terlampir di Sistem" : "",
+                  r.tanggalInput || "",
+                  r.namaPetugas || "",
+                  r.keteranganTindakan || ""
+              ];
+              dataToExport.push(row);
+          });
+
+          const ws = XLSX.utils.aoa_to_sheet(dataToExport);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Data_Reklame");
+          
+          let fileName = "Data_Export_Reklame";
+          const fPajak = document.getElementById("filterJenisPajak").value;
+          if (fPajak) fileName += "_" + fPajak.replace(/[^a-zA-Z0-9]/g, "_");
+          
+          XLSX.writeFile(wb, fileName + ".xlsx");
+          showToast("Data Excel berhasil diunduh!", "success");
       }
 
       function updateNJOPR() {
@@ -2821,7 +3138,6 @@
           document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-indigo-600 mr-2"></i>Tambah Akun Petugas`;
           document.getElementById('userPassword').setAttribute('required', 'true');
           
-          // Reset Checkboxes
           document.getElementById('access-table').checked = false;
           document.getElementById('access-laporan').checked = false;
 
@@ -2842,13 +3158,11 @@
           document.getElementById('userName').value = u.name;
           document.getElementById('userUsername').value = u.username;
           
-          // Password not required for edit unless they want to change it
           document.getElementById('userPassword').removeAttribute('required');
           document.getElementById('userPassword').value = "";
           
           document.getElementById('user-modal-title').innerHTML = `<i class="fa-solid fa-user-pen text-indigo-600 mr-2"></i>Edit Akun Petugas`;
 
-          // Set permissions
           const p = u.permissions || {};
           document.getElementById('access-table').checked = p.table || false;
           document.getElementById('access-laporan').checked = p.laporan || false;
@@ -2903,7 +3217,11 @@
 
       async function deleteUser(key, name) {
         if (!isAdmin()) { showToast('Akses ditolak.', 'error'); return; }
-        if (!confirm(`Apakah Anda yakin ingin menghapus akses login untuk petugas "${name}"?`)) return;
+        const userConfirm = window.prompt(`Ketik "HAPUS" untuk menghapus akses login untuk petugas "${name}"`);
+        if (userConfirm !== "HAPUS") {
+           showToast('Batal menghapus.', 'info');
+           return;
+        }
         try {
           showToast('Menghapus akun...', 'info');
           await putFirebase(`users/${key}`, undefined, 'DELETE');
@@ -2914,7 +3232,6 @@
         }
       }
 
-      // Tutup modal dengan tombol ESC dan cegah submit ganda.
       document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         closePhotoModal();
@@ -2922,13 +3239,15 @@
         closeUserModal();
       });
 
-      // Klik di luar dropdown pencarian untuk menutupnya.
       document.addEventListener('click', (event) => {
         if (!event.target.closest('#searchResults') && !event.target.closest('#searchDatabaseInput')) {
           document.getElementById('searchResults')?.classList.add('hidden');
         }
         if (!event.target.closest('#searchLaporanResults') && !event.target.closest('#searchLaporanInput')) {
           document.getElementById('searchLaporanResults')?.classList.add('hidden');
+        }
+        if (!event.target.closest('#publicSearchResults') && !event.target.closest('#publicSearchInput')) {
+          document.getElementById('publicSearchResults')?.classList.add('hidden');
         }
       });
     </script>
