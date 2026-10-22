@@ -1558,7 +1558,7 @@
           const registered = r.statusRegistrasi === 'SUDAH_TERDAFTAR';
           const active = r.statusKeaktifan === 'AKTIF';
           const badgeReg = `<span class="px-2 py-0.5 ${registered ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'} rounded text-[9px] font-bold">${registered ? 'TERDAFTAR' : 'BARU'}</span>`;
-          const badgeAkt = `<span class="px-2 py-0.5 ${active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'} rounded text-[9px] font-bold">${active ? 'AKTIF' : 'TUTUP'}</span>`;
+          const badgeAkt = `<span class="px-2 py-0.5 ${active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'} rounded text-[9px] font-bold">${active ? 'AKTIF' : 'TUTUP'}</span>`;
 
           const div = document.createElement('div');
           div.className = "p-4 hover:bg-slate-800/80 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
@@ -1568,8 +1568,8 @@
                 <span class="font-bold text-white text-sm">${escapeHTML(r.namaUsaha)}</span>
                 ${badgeReg} ${badgeAkt}
               </div>
-              <p class="text-xs text-slate-400">Wajib Pajak: <span class="text-slate-200 font-semibold">${escapeHTML(r.namaWP)}</span> (${registered ? 'NPWPD: ' + escapeHTML(r.npwpd) : 'NIK: ' + escapeHTML(r.nik)})</p>
-              <p class="text-xs text-indigo-200 font-medium"><i class="fa-solid fa-quote-left mr-1"></i> Naskah: "${escapeHTML(r.judulReklame || '-')}"</p>
+              <p class="text-xs text-slate-400">Wajib Pajak: <span class="text-slate-200 font-semibold">${escapeHTML(r.namaWP)}</span> ${registered ? '(NPWPD: ' + escapeHTML(r.npwpd) + ')' : ''}</p>
+              <p class="text-xs text-indigo-200 font-medium"><i class="fa-solid fa-quote-left mr-1"></i> Reklame: "${escapeHTML(r.judulReklame || '-')}"</p>
               <p class="text-[11px] text-indigo-300"><i class="fa-solid fa-location-dot mr-1"></i> ${escapeHTML(r.alamatUsaha)}</p>
               <p class="text-[11px] text-slate-300 font-medium">Jenis Reklame: ${escapeHTML(r.jenisReklame)}</p>
             </div>
@@ -2476,13 +2476,13 @@
           const tr = document.createElement('tr');
           tr.className = 'hover:bg-slate-50 transition';
           tr.innerHTML = `
-            <td class="px-4 py-3.5 font-mono text-xs text-slate-400 align-top">${realIndex}</td>
-            <td class="px-4 py-3.5 align-top"><div class="font-bold text-slate-900">${escapeHTML(r.namaUsaha)}</div><div class="text-[11px] text-slate-500">WP: ${escapeHTML(r.namaWP)}</div><div class="text-[10px] text-slate-400 font-mono">${registered ? escapeHTML(r.npwpd) : 'NIK: ' + escapeHTML(r.nik)}</div><div>${tagHtml}</div></td>
-            <td class="px-4 py-3.5 align-top"><div class="font-bold text-slate-800 text-xs">${escapeHTML(r.judulReklame)}</div><div class="text-[11px] text-indigo-900 font-semibold mt-1">${escapeHTML(r.alamatUsaha)}</div></td>
-            <td class="px-4 py-3.5 align-top"><div class="text-[11px] font-bold text-slate-700">${escapeHTML(r.jenisReklame)}</div><div class="text-[11px] text-slate-600 font-mono mt-1">${dim}</div><div class="text-[10px] text-slate-400 mt-0.5">${escapeHTML(r.kelasJalan)}</div></td>
-            <td class="px-4 py-3.5 text-center align-top whitespace-nowrap">${badgeReg}<br>${badgeAkt}</td>
-            <td class="px-4 py-3.5 text-center align-top">${photoButton}</td>
-            <td class="px-4 py-3.5 text-center align-top">${btnActions}</td>`;
+            <td class="px-4 py-3 font-mono text-xs text-slate-400 align-top">${realIndex}</td>
+            <td class="px-4 py-3 align-top"><div class="font-bold text-slate-900">${escapeHTML(r.namaUsaha)}</div><div class="text-[11px] text-slate-500">WP: ${escapeHTML(r.namaWP)}</div><div class="text-[10px] text-slate-400 font-mono">${registered ? escapeHTML(r.npwpd) : 'NIK: ' + escapeHTML(r.nik)}</div><div>${tagHtml}</div></td>
+            <td class="px-4 py-3 align-top"><div class="font-bold text-slate-800 text-xs">${escapeHTML(r.judulReklame)}</div><div class="text-[11px] text-indigo-900 font-semibold mt-1">${escapeHTML(r.alamatUsaha)}</div></td>
+            <td class="px-4 py-3 align-top"><div class="text-[11px] font-bold text-slate-700 max-w-[200px]" title="${escapeHTML(r.jenisReklame)}">${escapeHTML(r.jenisReklame)}</div><div class="text-[11px] text-slate-600 font-mono mt-1">${dim}</div><div class="text-[10px] text-slate-400 mt-0.5">${escapeHTML(r.kelasJalan)}</div></td>
+            <td class="px-4 py-3 text-center align-top whitespace-nowrap">${badgeReg}<br>${badgeAkt}</td>
+            <td class="px-4 py-3 text-center align-top">${photoButton}</td>
+            <td class="px-4 py-3 align-top whitespace-nowrap text-right space-x-0.5">${btnActions}</td>`;
           tbody.appendChild(tr);
 
           const card = document.createElement('div');
@@ -2777,7 +2777,6 @@
         document.getElementById('lap-nama-usaha').innerText = r.namaUsaha || "-";
         document.getElementById('lap-judul').innerText = r.judulReklame || "-";
         document.getElementById('lap-alamat-usaha').innerText = r.alamatUsaha || "-";
-        document.getElementById('lap-koordinat').innerText = (r.lat && r.lng) ? `${r.lat}, ${r.lng}` : "-";
         document.getElementById('lap-jenis').innerText = r.jenisReklame || "-";
         document.getElementById('lap-dimensi').innerText = `${r.panjang} M x ${r.lebar} M (${r.sisi} Sisi)`;
         document.getElementById('lap-kelas').innerText = r.kelasJalan || "-";
@@ -2836,8 +2835,7 @@
                     <td class="border border-slate-300 p-1.5 text-center align-top">${idx + 1}</td>
                     <td class="border border-slate-300 p-1.5 align-top font-medium leading-tight">
                         <span class="font-bold text-slate-900">${escapeHTML(r.namaWP || "-")}</span>
-                        <span class="text-slate-600 font-mono text-[9px] block mt-0.5">NIK: ${escapeHTML(r.nik || "-")}</span>
-                        <span class="text-slate-600 font-mono text-[9px] block">No. HP: ${escapeHTML(r.nomorHP || "-")}</span>
+                        <span class="text-slate-600 font-mono text-[9px] block mt-0.5">No. HP: ${escapeHTML(r.nomorHP || "-")}</span>
                         <span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatWP || "-")}</span>
                     </td>
                     <td class="border border-slate-300 p-1.5 align-top leading-tight"><span class="font-bold text-indigo-900">${escapeHTML(r.namaUsaha)}</span>${badge}<span class="text-slate-500 font-normal mt-0.5 block">${escapeHTML(r.alamatUsaha)}</span></td>
@@ -2866,7 +2864,7 @@
         document.getElementById('str-wp').innerText = r.namaWP;
         const strHp = document.getElementById('str-hp');
         if (strHp) strHp.innerText = r.nomorHP || '-';
-        document.getElementById('str-npwpd').innerText = (r.statusRegistrasi === "SUDAH_TERDAFTAR") ? r.npwpd : r.nik;
+        document.getElementById('str-npwpd').innerText = (r.statusRegistrasi === "SUDAH_TERDAFTAR") ? r.npwpd : '-';
         document.getElementById('str-naskah').innerText = r.judulReklame;
         document.getElementById('str-jenis').innerText = r.jenisReklame;
         document.getElementById('str-ukuran').innerText = `${r.panjang}x${r.lebar}`;
